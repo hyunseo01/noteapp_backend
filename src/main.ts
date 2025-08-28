@@ -73,7 +73,7 @@ async function bootstrap() {
       saveUninitialized: false,
       cookie: {
         httpOnly: true,
-        secure: false, // HTTPS 배포 시 true
+        secure: process.env.SESSION_COOKIE_SECURE === 'true',
         maxAge: 1000 * 60 * 60 * 24 * 7,
       },
     }),
