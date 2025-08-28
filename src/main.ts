@@ -37,11 +37,11 @@ async function bootstrap() {
     }),
   );
 
-  //전역 예외 필터 / 성공 응답 인터셉터
+  //전역 예외 필터/성공 응답 인터셉터
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new TransformInterceptor());
 
-  // 1) node-redis 클라이언트
+  //node-redis 클라이언트
   const redisClient: RedisClientType = createClient({
     socket: {
       host: process.env.REDIS_HOST ?? 'localhost',
@@ -58,7 +58,6 @@ async function bootstrap() {
 
   await redisClient.connect();
 
-  // 2) 생성자 파라미터 타입 추론해서 any/never 문제 회피
   type RedisStoreCtorArg = ConstructorParameters<typeof RedisStore>[0];
 
   const store = new RedisStore({
