@@ -3,6 +3,11 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { PinsModule } from './pins/pins.module';
+import { UnitsModule } from './units/units.module';
+import { PinAreaTypesModule } from './pin-area-types/pin-area-types.module';
+import { PinDirectionsModule } from './pin-directions/pin-directions.module';
+import { UnitOptionModule } from './unit-option/unit-option.module';
 
 @Module({
   imports: [
@@ -20,6 +25,11 @@ import { AppService } from './app.service';
         logging: ['error', 'schema', 'warn', 'query'],
       }),
     }),
+    PinsModule,
+    UnitsModule,
+    PinAreaTypesModule,
+    PinDirectionsModule,
+    UnitOptionModule,
   ],
   controllers: [AppController],
   providers: [AppService],
