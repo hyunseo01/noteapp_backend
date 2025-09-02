@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { PinAreaTypesService } from './pin-area-types.service';
 import { CreatePinAreaTypeDto } from './dto/create-pin-area-type.dto';
 import { UpdatePinAreaTypeDto } from './dto/update-pin-area-type.dto';
@@ -23,7 +31,10 @@ export class PinAreaTypesController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePinAreaTypeDto: UpdatePinAreaTypeDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updatePinAreaTypeDto: UpdatePinAreaTypeDto,
+  ) {
     return this.pinAreaTypesService.update(+id, updatePinAreaTypeDto);
   }
 

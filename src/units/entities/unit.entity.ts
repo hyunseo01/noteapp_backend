@@ -69,7 +69,7 @@ export class Unit {
   baths!: number;
 
   @Column({ type: 'bigint', name: 'sale_price_won' })
-  salePriceWon!: string;
+  salePriceWon!: number;
 
   @Column({
     type: 'enum',

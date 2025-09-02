@@ -115,6 +115,12 @@ export class Pin {
   })
   contactSubPhone: string | null = null;
 
+  @Column({ type: 'boolean', default: false })
+  isOld!: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  isNew!: boolean;
+
   @Column({ type: 'text', name: 'public_memo', nullable: true })
   publicMemo: string | null = null;
 
