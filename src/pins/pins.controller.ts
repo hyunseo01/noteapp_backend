@@ -11,6 +11,6 @@ export class PinsController {
   @Get('map')
   async getMapPins(@Query() dto: MapPinsDto) {
     const data = await this.pinsService.getMapPins(dto);
-    return { success: true, data };
+    return { data };
   }
 }

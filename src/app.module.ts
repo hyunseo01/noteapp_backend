@@ -8,6 +8,7 @@ import { UnitsModule } from './units/units.module';
 import { PinAreaTypesModule } from './pin-area-types/pin-area-types.module';
 import { PinDirectionsModule } from './pin-directions/pin-directions.module';
 import { UnitOptionModule } from './unit-option/unit-option.module';
+import { PinOptionsModule } from './pin-options/pin-options.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { UnitOptionModule } from './unit-option/unit-option.module';
     PinAreaTypesModule,
     PinDirectionsModule,
     UnitOptionModule,
+    PinOptionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

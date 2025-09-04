@@ -35,12 +35,12 @@ export class MapPinsDto {
   @Max(180)
   neLng!: number;
 
-  /** 카카오맵 줌 레벨 */
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(20)
-  zoom!: number;
+  /** 카카오맵 줌 레벨 클러스터링 */
+  // @Type(() => Number)
+  // @IsInt()
+  // @Min(1)
+  // @Max(20)
+  // zoom!: number;
 
   @Type(() => Boolean)
   @IsOptional()

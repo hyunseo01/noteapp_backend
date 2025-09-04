@@ -4,10 +4,10 @@ import { Repository, Brackets } from 'typeorm';
 import { MapPinsDto } from './dto/map-pins.dto';
 import { Pin } from './entities/pin.entity';
 
-type ClusterResp = {
-  mode: 'cluster';
-  clusters: Array<{ lat: number; lng: number; count: number }>;
-};
+// type ClusterResp = {
+//   mode: 'cluster';
+//   clusters: Array<{ lat: number; lng: number; count: number }>;
+// };
 
 type PointResp = {
   mode: 'point';
@@ -18,96 +18,44 @@ type PointResp = {
 export class PinsService {
   constructor(
     @InjectRepository(Pin)
-    private readonly repo: Repository<Pin>,
+    private readonly pinRepository: Repository<Pin>,
   ) {}
 
-  /**
-   * 줌 기준(프론트가 최종 수치 확정해서 전달)
-   * - 국가/시·도(줌 낮음)  → cluster
-   * - 구 이하(줌 높음)     → point
-   *
-   * 기본값 예시:
-   *  - Z_POINT_FROM = 12 : 줌 12 이상이면 구/동 단위로 간주, 포인트 모드
-   *  (프로젝트에서 프론트와 합의 후 값만 교체)
-   */
-  private readonly Z_POINT_FROM = 12;
+  async getMapPins(dto: MapPinsDto): Promise<PointResp /* | ClusterResp */> {
+    const { swLat, swLng, neLat, neLng, isOld, isNew, favoriteOnly } = dto;
 
-  /**
-   * 국가/시도 클러스터링 그리드 크기(단순 binning)
-   * - 전국 수준: 큰 셀
-   * - 시/도 수준: 중간 셀
-   */
-  private clusterCellSizeDeg(zoom: number): number {
-    if (zoom <= 9) return 1.0; // 국가/광역
-    return 0.25; // 시/도
-  }
+    const qb = this.pinRepository
+      .createQueryBuilder('p')
+      .select(['p.id AS id', 'p.lat AS lat', 'p.lng AS lng'])
+      .where('p.lat BETWEEN :swLat AND :neLat', { swLat, neLat })
+      .andWhere('p.lng BETWEEN :swLng AND :neLng', { swLng, neLng });
 
-  private buildBaseWhere(
-    qb: ReturnType<Repository<Pin>['createQueryBuilder']>,
-    dto: MapPinsDto,
-  ) {
-    const { swLat, swLng, neLat, neLng, isOld, isNew } = dto;
-
-    qb.where('p.isDeleted = false').andWhere(
-      new Brackets((w) => {
-        w.where('p.lat BETWEEN :minLat AND :maxLat', {
-          minLat: swLat,
-          maxLat: neLat,
-        }).andWhere('p.lng BETWEEN :minLng AND :maxLng', {
-          minLng: swLng,
-          maxLng: neLng,
-        });
-      }),
-    );
-
-    // 구옥/신축 필터 (둘 다 false/undefined면 조건 없음)
-    if (isOld === true) qb.andWhere('p.isOld = true');
-    if (isNew === true) qb.andWhere('p.isNew = true');
-
-    // 즐겨찾기(favoriteOnly)는 DB 생기면 여기서 조인/조건 추가 예정
-  }
-
-  async getMapPins(dto: MapPinsDto): Promise<ClusterResp | PointResp> {
-    const { zoom } = dto;
-
-    // 줌 기준으로 모드 결정: 구부터는 포인트, 그 외는 클러스터
-    const pointMode = zoom >= this.Z_POINT_FROM;
-
-    if (!pointMode) {
-      // ---- 클러스터 모드 (국가/시·도) ----
-      const cell = this.clusterCellSizeDeg(zoom);
-      const qb = this.repo
-        .createQueryBuilder('p')
-        .select('AVG(p.lat)', 'lat')
-        .addSelect('AVG(p.lng)', 'lng')
-        .addSelect('COUNT(*)', 'count')
-        .addSelect(`FLOOR(p.lat / ${cell})`, 'gx')
-        .addSelect(`FLOOR(p.lng / ${cell})`, 'gy')
-        .groupBy('gx, gy');
-
-      this.buildBaseWhere(qb, dto);
-
-      const rows = await qb.getRawMany<{
-        lat: string;
-        lng: string;
-        count: string;
-      }>();
-      const clusters = rows.map((r) => ({
-        lat: Number(r.lat),
-        lng: Number(r.lng),
-        count: Number(r.count),
-      }));
-
-      return { mode: 'cluster', clusters };
+    // 선택 필터들 (예: 준공/신축 여부, 즐겨찾기만 등)
+    if (typeof isOld === 'boolean') {
+      qb.andWhere('p.is_old = :isOld', { isOld });
+    }
+    if (typeof isNew === 'boolean') {
+      qb.andWhere('p.is_new = :isNew', { isNew });
+    }
+    if (typeof favoriteOnly === 'boolean' && favoriteOnly) {
+      // 즐겨찾기 조인/조건 예시 (스키마에 맞게 조정)
+      qb.andWhere(
+        new Brackets((w) => {
+          // 예: 현재 사용자 기준 즐겨찾기 여부. 실제 컬럼/관계명에 맞게 수정하세요.
+          w.where('p.is_favorite = TRUE');
+        }),
+      );
     }
 
-    // ---- 포인트 모드 (구 이하) ----
-    const qb = this.repo
-      .createQueryBuilder('p')
-      .select(['p.id AS id', 'p.lat AS lat', 'p.lng AS lng']);
+    // ===== [비활성화: 서버측 클러스터링 분기] =====
+    // if (dto.zoom !== undefined && dto.zoom < 15) {
+    //   // 낮은 줌 레벨 → 서버에서 클러스터링 모드
+    //   const clusters = await this.buildClusters(qb);
+    //   return { mode: 'cluster', clusters };
+    // }
+    // ===========================================
 
-    this.buildBaseWhere(qb, dto);
-
+    // 항상 포인트 모드로 반환
     const points = await qb
       .orderBy('p.id', 'DESC')
       .getRawMany<{ id: string; lat: string; lng: string }>();
@@ -121,4 +69,41 @@ export class PinsService {
       })),
     };
   }
+
+  /**
+   * [서버 클러스터링 로직]
+   * 현행에선 호출하지 않으며, 필요 시 프론트가 하지 못하는 경우를 대비해 남겨둠
+   */
+  // private async buildClusters(baseQb: SelectQueryBuilder<Pin>): Promise<Array<{ lat: number; lng: number; count: number }>> {
+  //   const raw = await baseQb
+  //     .select([
+  //       'p.lat AS lat',
+  //       'p.lng AS lng',
+  //     ])
+  //     .getRawMany<{ lat: string; lng: string }>();
+  //
+  //   // 간단한 grid 기반 클러스터링 예시
+  //   const cellSize = 0.01; // 대략 ~1km 수준(위경도 기준 대략치), 필요 시 조정
+  //   const map = new Map<string, { latSum: number; lngSum: number; count: number }>();
+  //
+  //   for (const r of raw) {
+  //     const lat = Number(r.lat);
+  //     const lng = Number(r.lng);
+  //     const key = `${Math.floor(lat / cellSize)}:${Math.floor(lng / cellSize)}`;
+  //     const prev = map.get(key);
+  //     if (prev) {
+  //       prev.latSum += lat;
+  //       prev.lngSum += lng;
+  //       prev.count += 1;
+  //     } else {
+  //       map.set(key, { latSum: lat, lngSum: lng, count: 1 });
+  //     }
+  //   }
+  //
+  //   return Array.from(map.values()).map((c) => ({
+  //     lat: c.latSum / c.count,
+  //     lng: c.lngSum / c.count,
+  //     count: c.count,
+  //   }));
+  // }
 }
