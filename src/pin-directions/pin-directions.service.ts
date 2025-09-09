@@ -1,26 +1,27 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { EntityManager, Repository } from 'typeorm';
+import { PinDirection } from './entities/pin-direction.entity';
 import { CreatePinDirectionDto } from './dto/create-pin-direction.dto';
-import { UpdatePinDirectionDto } from './dto/update-pin-direction.dto';
 
 @Injectable()
 export class PinDirectionsService {
-  create(createPinDirectionDto: CreatePinDirectionDto) {
-    return 'This action adds a new pinDirection';
-  }
+  constructor(
+    @InjectRepository(PinDirection)
+    private pinDirectionRepository: Repository<PinDirection>,
+  ) {}
 
-  findAll() {
-    return `This action returns all pinDirections`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} pinDirection`;
-  }
-
-  update(id: number, updatePinDirectionDto: UpdatePinDirectionDto) {
-    return `This action updates a #${id} pinDirection`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} pinDirection`;
+  async replaceForPinWithManager(
+    manager: EntityManager,
+    pinId: string,
+    items: CreatePinDirectionDto[] = [],
+  ) {
+    const pinDirectionRepo = manager.getRepository(PinDirection);
+    await pinDirectionRepo.delete({ pinId });
+    if (!items.length) return;
+    const rows = items.map((d) =>
+      pinDirectionRepo.create({ pinId, direction: d.direction }),
+    );
+    await pinDirectionRepo.save(rows);
   }
 }

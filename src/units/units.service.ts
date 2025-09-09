@@ -1,26 +1,36 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { DataSource, Repository } from 'typeorm';
+import { Unit } from './entities/unit.entity';
 import { CreateUnitDto } from './dto/create-unit.dto';
-import { UpdateUnitDto } from './dto/update-unit.dto';
 
 @Injectable()
 export class UnitsService {
-  create(createUnitDto: CreateUnitDto) {
-    return 'This action adds a new unit';
-  }
+  constructor(
+    @InjectRepository(Unit) private readonly unitRepository: Repository<Unit>,
+    private readonly dataSource: DataSource,
+  ) {}
 
-  findAll() {
-    return `This action returns all units`;
-  }
+  /** PinsService 트랜잭션 매니저를 그대로 받아서 일괄 생성 */
+  async bulkCreateWithManager(
+    manager: DataSource['manager'],
+    pinId: string,
+    items: CreateUnitDto[],
+  ): Promise<void> {
+    if (!items?.length) return;
 
-  findOne(id: number) {
-    return `This action returns a #${id} unit`;
-  }
-
-  update(id: number, updateUnitDto: UpdateUnitDto) {
-    return `This action updates a #${id} unit`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} unit`;
+    const unitRepo = manager.getRepository(Unit);
+    const rows = items.map((d) =>
+      unitRepo.create({
+        pinId,
+        rooms: d.rooms ?? null,
+        baths: d.baths ?? null,
+        hasLoft: d.hasLoft ?? null,
+        hasTerrace: d.hasTerrace ?? null,
+        salePrice: d.salePrice ?? null, // 그대로 number 저장
+        note: d.note ?? null,
+      }),
+    );
+    await unitRepo.save(rows);
   }
 }

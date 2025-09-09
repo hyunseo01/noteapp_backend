@@ -3,31 +3,18 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
-  OneToOne,
   JoinColumn,
-  Unique,
   Index,
 } from 'typeorm';
 import { Pin } from '../../pins/entities/pin.entity';
-import { PinAreaType } from '../../pin-area-types/entities/pin-area-type.entity';
-import { PinDirection } from '../../pin-directions/entities/pin-direction.entity';
-import { UnitOption } from '../../unit-option/entities/unit-option.entity';
-
-export type UnitStatus = 'ON_MARKET' | 'RESERVED' | 'SOLD';
 
 @Entity({ name: 'units' })
-@Unique('uq_unit_uniqueness', [
-  'pinId',
-  'areaTypeId',
-  'floor',
-  'rooms',
-  'baths',
-])
-@Index(['pinId', 'status'])
+@Index(['pinId'])
 export class Unit {
   @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
   id!: string;
 
+  /* 소속 핀 */
   @Column({ type: 'bigint', unsigned: true, name: 'pin_id' })
   pinId!: string;
 
@@ -35,53 +22,22 @@ export class Unit {
   @JoinColumn({ name: 'pin_id' })
   pin!: Pin;
 
-  @Column({
-    type: 'bigint',
-    unsigned: true,
-    name: 'area_type_id',
-    nullable: true,
-  })
-  areaTypeId: string | null = null;
+  /* 구조 */
+  @Column({ type: 'int', name: 'rooms', nullable: true })
+  rooms: number | null = null;
 
-  @ManyToOne(() => PinAreaType, { onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'area_type_id' })
-  areaType: PinAreaType | null = null;
+  @Column({ type: 'int', name: 'baths', nullable: true })
+  baths: number | null = null;
 
-  @Column({ type: 'smallint', name: 'floor', nullable: true })
-  floor: number | null = null;
+  @Column({ type: 'boolean', name: 'has_loft', nullable: true })
+  hasLoft: boolean | null = null;
 
-  @Column({
-    type: 'bigint',
-    unsigned: true,
-    name: 'direction_id',
-    nullable: true,
-  })
-  directionId: string | null = null;
+  @Column({ type: 'boolean', name: 'has_terrace', nullable: true })
+  hasTerrace: boolean | null = null;
 
-  @ManyToOne(() => PinDirection, { onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'direction_id' })
-  direction: PinDirection | null = null;
+  @Column({ type: 'bigint', name: 'sale_price', nullable: true })
+  salePrice: number | null = null;
 
-  @Column({ type: 'tinyint', name: 'rooms' })
-  rooms!: number;
-
-  @Column({ type: 'tinyint', name: 'baths' })
-  baths!: number;
-
-  @Column({ type: 'bigint', name: 'sale_price_won' })
-  salePriceWon!: number;
-
-  @Column({
-    type: 'enum',
-    enum: ['ON_MARKET', 'RESERVED', 'SOLD'],
-    name: 'status',
-    default: 'ON_MARKET',
-  })
-  status!: UnitStatus;
-
-  @Column({ type: 'text', name: 'memo', nullable: true })
-  memo: string | null = null;
-
-  @OneToOne(() => UnitOption, (o) => o.unit, { cascade: true })
-  options!: UnitOption;
+  @Column({ type: 'varchar', length: 255, name: 'note', nullable: true })
+  note: string | null = null;
 }

@@ -3,13 +3,13 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
-  Unique,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Pin } from '../../pins/entities/pin.entity';
 
 @Entity({ name: 'pin_area_types' })
-@Unique('uq_pin_area_label', ['pinId', 'label'])
+@Index(['pinId'])
 export class PinAreaType {
   @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
   id!: string;
@@ -21,34 +21,11 @@ export class PinAreaType {
   @JoinColumn({ name: 'pin_id' })
   pin!: Pin;
 
-  @Column({ type: 'varchar', length: 30, name: 'label' })
-  label!: string; // 예: '84A', '59B'
+  /** 전용면적(㎡) — 숫자로 저장 */
+  @Column({ type: 'decimal', precision: 10, scale: 2, name: 'exclusive_area' })
+  exclusiveArea!: string; // TypeORM decimal → 런타임에서 문자열. 숫자로 쓰고 싶으면 transformer 추가
 
-  @Column({
-    type: 'decimal',
-    precision: 6,
-    scale: 2,
-    name: 'area_exclusive_m2',
-    nullable: true,
-  })
-  areaExclusiveM2: string | null = null;
-
-  @Column({
-    type: 'decimal',
-    precision: 6,
-    scale: 2,
-    name: 'area_actual_m2',
-    nullable: true,
-  })
-  areaActualM2: string | null = null;
-
-  @Column({ type: 'boolean', name: 'is_primary', default: false })
-  isPrimary!: boolean;
-
-  @Column({
-    type: 'datetime',
-    name: 'created_at',
-    default: () => 'CURRENT_TIMESTAMP',
-  })
-  createdAt!: Date;
+  /** (선택) 표시 라벨: '59', '84'같은 간단 표기 */
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  label: string | null = null;
 }

@@ -1,8 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Brackets } from 'typeorm';
+import { Repository, Brackets, DataSource } from 'typeorm';
 import { MapPinsDto } from './dto/map-pins.dto';
 import { Pin } from './entities/pin.entity';
+import { CreatePinDto } from './dto/create-pin.dto';
+import { PinOption } from '../pin-options/entities/pin-option.entity';
+import { UnitsService } from '../units/units.service';
+import { PinDirectionsService } from '../pin-directions/pin-directions.service';
+import { PinAreaTypesService } from '../pin-area-types/pin-area-types.service';
+import { PinOptionsService } from '../pin-options/pin-options.service';
 
 // type ClusterResp = {
 //   mode: 'cluster';
@@ -19,6 +25,13 @@ export class PinsService {
   constructor(
     @InjectRepository(Pin)
     private readonly pinRepository: Repository<Pin>,
+    @InjectRepository(PinOption)
+    private readonly pinOptionRepository: Repository<PinOption>,
+    private readonly dataSource: DataSource,
+    private readonly unitsService: UnitsService,
+    private readonly pinDirectionsService: PinDirectionsService,
+    private readonly pinAreaTypesService: PinAreaTypesService,
+    private readonly pinOptionsService: PinOptionsService,
   ) {}
 
   async getMapPins(dto: MapPinsDto): Promise<PointResp /* | ClusterResp */> {
@@ -106,4 +119,66 @@ export class PinsService {
   //     count: c.count,
   //   }));
   // }
+
+  async create(dto: CreatePinDto) {
+    // 좌표 1차 검증
+    if (!Number.isFinite(dto.lat) || !Number.isFinite(dto.lng)) {
+      throw new BadRequestException('잘못된 좌표');
+    }
+
+    return this.dataSource.transaction(async (manager) => {
+      const pinRepo = manager.getRepository(Pin);
+
+      // 1) 핀 본체 저장
+      const pin = pinRepo.create({
+        lat: String(dto.lat),
+        lng: String(dto.lng),
+        addressLine: dto.addressLine,
+        name: dto.name ?? null,
+        province: dto.province ?? null,
+        city: dto.city ?? null,
+        district: dto.district ?? null,
+        hasElevator: dto.hasElevator ?? null,
+      });
+      await pinRepo.save(pin);
+
+      if (dto.options) {
+        await this.pinOptionsService.upsertWithManager(
+          manager,
+          pin.id,
+          dto.options,
+        );
+      }
+
+      // 3) 방향 리스트 – undefined면 변경 없음, 배열이면 교체
+      if (Array.isArray(dto.directions)) {
+        await this.pinDirectionsService.replaceForPinWithManager(
+          manager,
+          pin.id,
+          dto.directions,
+        );
+      }
+
+      // 4) 전용면적 리스트 – undefined면 변경 없음, 배열이면 교체
+      if (Array.isArray(dto.areaTypes)) {
+        await this.pinAreaTypesService.replaceForPinWithManager(
+          manager,
+          pin.id,
+          dto.areaTypes,
+        );
+      }
+
+      // 5) 유닛(타입별 라인: 방/욕실/복층/테라스/매매가) – 전달됐을 때만 생성
+      if (Array.isArray(dto.units) && dto.units.length > 0) {
+        await this.unitsService.bulkCreateWithManager(
+          manager,
+          pin.id,
+          dto.units,
+        );
+      }
+
+      // 최소 응답 (필요시 확장)
+      return { id: String(pin.id) };
+    });
+  }
 }

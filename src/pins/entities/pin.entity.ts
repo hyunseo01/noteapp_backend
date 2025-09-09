@@ -4,10 +4,13 @@ import {
   Column,
   OneToMany,
   Index,
+  OneToOne,
+  JoinColumn,
 } from 'typeorm';
 import { PinAreaType } from '../../pin-area-types/entities/pin-area-type.entity';
 import { PinDirection } from '../../pin-directions/entities/pin-direction.entity';
 import { Unit } from '../../units/entities/unit.entity';
+import { PinOption } from '../../pin-options/entities/pin-option.entity';
 
 export type Grade3 = '상' | '중' | '하';
 export type BuildingType = 'APT' | 'OP' | '주택' | '근생';
@@ -46,6 +49,9 @@ export class Pin {
     nullable: true,
   })
   buildingType: BuildingType | null = null;
+
+  @Column({ type: 'boolean', name: 'has_elevator', nullable: true })
+  hasElevator: boolean | null = null;
 
   @Column({ type: 'int', name: 'total_households', nullable: true })
   totalHouseholds: number | null = null;
@@ -126,6 +132,14 @@ export class Pin {
 
   @Column({ type: 'text', name: 'private_memo', nullable: true })
   privateMemo: string | null = null;
+
+  @OneToOne(() => PinOption, (o) => o.pin, {
+    cascade: true,
+    nullable: true,
+    eager: true,
+  })
+  @JoinColumn({ name: 'pin_option_id' })
+  options: PinOption | null = null;
 
   @Column({
     type: 'bigint',
