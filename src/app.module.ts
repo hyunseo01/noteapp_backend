@@ -5,10 +5,9 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PinsModule } from './pins/pins.module';
 import { UnitsModule } from './units/units.module';
-import { PinAreaTypesModule } from './pin-area-types/pin-area-types.module';
 import { PinDirectionsModule } from './pin-directions/pin-directions.module';
-import { UnitOptionModule } from './unit-option/unit-option.module';
 import { PinOptionsModule } from './pin-options/pin-options.module';
+import { PinAreaGroupsModule } from './pin_area_groups/pin_area_groups.module';
 
 @Module({
   imports: [
@@ -28,10 +27,9 @@ import { PinOptionsModule } from './pin-options/pin-options.module';
     }),
     PinsModule,
     UnitsModule,
-    PinAreaTypesModule,
     PinDirectionsModule,
-    UnitOptionModule,
     PinOptionsModule,
+    PinAreaGroupsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

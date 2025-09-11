@@ -9,5 +9,6 @@ import { Pin } from '../pins/entities/pin.entity';
   imports: [TypeOrmModule.forFeature([PinDirection, Pin])],
   controllers: [PinDirectionsController],
   providers: [PinDirectionsService],
+  exports: [PinDirectionsService],
 })
 export class PinDirectionsModule {}

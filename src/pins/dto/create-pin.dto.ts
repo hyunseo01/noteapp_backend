@@ -9,13 +9,13 @@ import {
   Max,
   ValidateNested,
   IsArray,
+  IsNotEmpty,
 } from 'class-validator';
 import { CreateUnitDto } from '../../units/dto/create-unit.dto';
 import { CreatePinOptionsDto } from '../../pin-options/dto/create-pin-option.dto';
 import { CreatePinDirectionDto } from '../../pin-directions/dto/create-pin-direction.dto';
-import { CreatePinAreaTypeDto } from '../../pin-area-types/dto/create-pin-area-type.dto';
+import { CreatePinAreaGroupDto } from '../../pin_area_groups/dto/create-pin_area_group.dto';
 
-/** 핀 생성 요청 DTO (임시저장 없음: 좌표/주소는 필수) */
 export class CreatePinDto {
   @Type(() => Number)
   @IsNumber()
@@ -32,6 +32,27 @@ export class CreatePinDto {
   @IsString()
   @Length(1, 255)
   addressLine!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @Length(1, 20)
+  contactMainLabel!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @Length(1, 50)
+  contactMainPhone!: string;
+
+  // 서브 연락처(선택)
+  @IsOptional()
+  @IsString()
+  @Length(1, 20)
+  contactSubLabel?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 50)
+  contactSubPhone?: string;
 
   // 선택 필드들 (DB는 nullable 허용)
   @IsOptional()
@@ -56,7 +77,7 @@ export class CreatePinDto {
 
   @IsOptional()
   @IsBoolean()
-  hasElevator?: boolean; // 엘리베이터: 갯수 없음(여부만)
+  hasElevator?: boolean;
 
   /* 핀 옵션(핀 1:1) */
   @IsOptional()
@@ -80,6 +101,6 @@ export class CreatePinDto {
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => CreatePinAreaTypeDto)
-  areaTypes?: CreatePinAreaTypeDto[];
+  @Type(() => CreatePinAreaGroupDto)
+  areaGroups?: CreatePinAreaGroupDto[];
 }

@@ -11,7 +11,6 @@ export class UnitsService {
     private readonly dataSource: DataSource,
   ) {}
 
-  /** PinsService 트랜잭션 매니저를 그대로 받아서 일괄 생성 */
   async bulkCreateWithManager(
     manager: DataSource['manager'],
     pinId: string,

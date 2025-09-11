@@ -7,10 +7,10 @@ import {
   OneToOne,
   JoinColumn,
 } from 'typeorm';
-import { PinAreaType } from '../../pin-area-types/entities/pin-area-type.entity';
 import { PinDirection } from '../../pin-directions/entities/pin-direction.entity';
 import { Unit } from '../../units/entities/unit.entity';
 import { PinOption } from '../../pin-options/entities/pin-option.entity';
+import { PinAreaGroup } from '../../pin_area_groups/entities/pin_area_group.entity';
 
 export type Grade3 = '상' | '중' | '하';
 export type BuildingType = 'APT' | 'OP' | '주택' | '근생';
@@ -166,8 +166,8 @@ export class Pin {
   @Column({ type: 'datetime', name: 'deleted_at', nullable: true })
   deletedAt: Date | null = null;
 
-  @OneToMany(() => PinAreaType, (t) => t.pin, { cascade: ['remove'] })
-  areaTypes!: PinAreaType[];
+  @OneToMany(() => PinAreaGroup, (g) => g.pin, { cascade: ['remove'] })
+  areaGroups!: PinAreaGroup[]; // 새 관계
 
   @OneToMany(() => PinDirection, (d) => d.pin, { cascade: ['remove'] })
   directions!: PinDirection[];

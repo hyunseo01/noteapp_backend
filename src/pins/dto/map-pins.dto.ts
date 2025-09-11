@@ -1,11 +1,4 @@
-import {
-  IsNumber,
-  IsOptional,
-  IsInt,
-  Min,
-  Max,
-  IsBoolean,
-} from 'class-validator';
+import { IsNumber, IsOptional, Min, Max, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class MapPinsDto {

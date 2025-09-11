@@ -12,7 +12,7 @@ import {
 } from 'class-validator';
 import { CreatePinOptionsDto } from '../../pin-options/dto/create-pin-option.dto';
 import { CreatePinDirectionDto } from '../../pin-directions/dto/create-pin-direction.dto';
-import { CreatePinAreaTypeDto } from '../../pin-area-types/dto/create-pin-area-type.dto';
+import { CreatePinAreaGroupDto } from '../../pin_area_groups/dto/create-pin_area_group.dto';
 
 export class UpdatePinDto {
   // 좌표/주소 등 기본 필드 (부분 수정 가능)
@@ -75,6 +75,6 @@ export class UpdatePinDto {
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => CreatePinAreaTypeDto)
-  areaTypes?: CreatePinAreaTypeDto[];
+  @Type(() => CreatePinAreaGroupDto)
+  areaGroups?: CreatePinAreaGroupDto[];
 }

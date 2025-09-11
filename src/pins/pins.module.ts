@@ -3,12 +3,19 @@ import { PinsService } from './pins.service';
 import { PinsController } from './pins.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Pin } from './entities/pin.entity';
-import { PinAreaType } from '../pin-area-types/entities/pin-area-type.entity';
-import { PinDirection } from '../pin-directions/entities/pin-direction.entity';
-import { Unit } from '../units/entities/unit.entity';
+import { PinDirectionsModule } from '../pin-directions/pin-directions.module';
+import { UnitsModule } from '../units/units.module';
+import { PinAreaGroupsModule } from '../pin_area_groups/pin_area_groups.module';
+import { PinOptionsModule } from '../pin-options/pin-options.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Pin, PinAreaType, PinDirection, Unit])],
+  imports: [
+    TypeOrmModule.forFeature([Pin]),
+    UnitsModule,
+    PinDirectionsModule,
+    PinAreaGroupsModule,
+    PinOptionsModule,
+  ],
   controllers: [PinsController],
   providers: [PinsService],
 })
