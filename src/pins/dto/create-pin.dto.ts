@@ -10,11 +10,13 @@ import {
   ValidateNested,
   IsArray,
   IsNotEmpty,
+  IsEnum,
 } from 'class-validator';
 import { CreateUnitDto } from '../../units/dto/create-unit.dto';
 import { CreatePinOptionsDto } from '../../pin-options/dto/create-pin-option.dto';
 import { CreatePinDirectionDto } from '../../pin-directions/dto/create-pin-direction.dto';
 import { CreatePinAreaGroupDto } from '../../pin_area_groups/dto/create-pin_area_group.dto';
+import { PinBadge } from '../entities/pin.entity';
 
 export class CreatePinDto {
   @Type(() => Number)
@@ -28,6 +30,10 @@ export class CreatePinDto {
   @Min(-180)
   @Max(180)
   lng!: number;
+
+  @IsOptional()
+  @IsEnum(PinBadge)
+  badge?: PinBadge;
 
   @IsString()
   @Length(1, 255)

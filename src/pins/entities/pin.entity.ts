@@ -15,6 +15,22 @@ import { PinAreaGroup } from '../../pin_area_groups/entities/pin_area_group.enti
 export type Grade3 = '상' | '중' | '하';
 export type BuildingType = 'APT' | 'OP' | '주택' | '근생';
 
+export enum PinBadge {
+  R1_TO_1_5 = 'R1_TO_1_5',
+  R1_TO_1_5_TERRACE = 'R1_TO_1_5_TERRACE',
+  R2_TO_2_5 = 'R2_TO_2_5',
+  R2_TO_2_5_TERRACE = 'R2_TO_2_5_TERRACE',
+  R3 = 'R3',
+  R3_TERRACE = 'R3_TERRACE',
+  R4 = 'R4',
+  R4_TERRACE = 'R4_TERRACE',
+  LOFT = 'LOFT', // 복층
+  TOWNHOUSE = 'TOWNHOUSE', // 타운하우스
+  OLD_HOUSE = 'OLD_HOUSE', // 구옥
+  SURVEY_SCHEDULED = 'SURVEY_SCHEDULED', // 답사예정
+  MOVE_IN_COMPLETE = 'MOVE_IN_COMPLETE', // 입주완료
+}
+
 @Entity({ name: 'pins' })
 @Index(['lat', 'lng'])
 export class Pin {
@@ -26,6 +42,14 @@ export class Pin {
 
   @Column({ type: 'decimal', precision: 9, scale: 6, name: 'lng' })
   lng!: string;
+
+  @Column({
+    type: 'enum',
+    enum: PinBadge,
+    name: 'badge',
+    nullable: true,
+  })
+  badge: PinBadge | null = null;
 
   @Column({ type: 'text', name: 'address_line' })
   addressLine!: string;
@@ -167,7 +191,7 @@ export class Pin {
   deletedAt: Date | null = null;
 
   @OneToMany(() => PinAreaGroup, (g) => g.pin, { cascade: ['remove'] })
-  areaGroups!: PinAreaGroup[]; // 새 관계
+  areaGroups!: PinAreaGroup[];
 
   @OneToMany(() => PinDirection, (d) => d.pin, { cascade: ['remove'] })
   directions!: PinDirection[];

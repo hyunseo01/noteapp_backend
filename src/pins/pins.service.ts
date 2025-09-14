@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Brackets, DataSource, DeepPartial } from 'typeorm';
 import { MapPinsDto } from './dto/map-pins.dto';
@@ -8,6 +12,8 @@ import { UnitsService } from '../units/units.service';
 import { PinDirectionsService } from '../pin-directions/pin-directions.service';
 import { PinOptionsService } from '../pin-options/pin-options.service';
 import { PinAreaGroupsService } from '../pin_area_groups/pin_area_groups.service';
+import { PinResponseDto } from './dto/pin-detail.dto';
+import { UpdatePinDto } from './dto/update-pin.dto';
 
 // type ClusterResp = {
 //   mode: 'cluster';
@@ -40,7 +46,6 @@ export class PinsService {
       .where('p.lat BETWEEN :swLat AND :neLat', { swLat, neLat })
       .andWhere('p.lng BETWEEN :swLng AND :neLng', { swLng, neLng });
 
-    // 선택 필터들 (예: 준공/신축 여부, 즐겨찾기만 등)
     if (typeof isOld === 'boolean') {
       qb.andWhere('p.is_old = :isOld', { isOld });
     }
@@ -48,7 +53,6 @@ export class PinsService {
       qb.andWhere('p.is_new = :isNew', { isNew });
     }
     if (typeof favoriteOnly === 'boolean' && favoriteOnly) {
-      // 즐겨찾기 조인/조건 예시 (스키마에 맞게 조정)
       qb.andWhere(
         new Brackets((w) => {
           // 예: 현재 사용자 기준 즐겨찾기 여부. 실제 컬럼/관계명에 맞게 수정하세요.
@@ -57,18 +61,22 @@ export class PinsService {
       );
     }
 
-    // ===== [비활성화: 서버측 클러스터링 분기] =====
+    // 비활성화: 서버측 클러스터링 분기
     // if (dto.zoom !== undefined && dto.zoom < 15) {
     //   // 낮은 줌 레벨 → 서버에서 클러스터링 모드
     //   const clusters = await this.buildClusters(qb);
     //   return { mode: 'cluster', clusters };
     // }
-    // ===========================================
 
-    // 항상 포인트 모드로 반환
     const points = await qb
+      .select(['p.id', 'p.lat', 'p.lng', 'p.badge'])
       .orderBy('p.id', 'DESC')
-      .getRawMany<{ id: string; lat: string; lng: string }>();
+      .getRawMany<{
+        id: string;
+        lat: string;
+        lng: string;
+        badge: string | null;
+      }>();
 
     return {
       mode: 'point',
@@ -76,14 +84,12 @@ export class PinsService {
         id: String(p.id),
         lat: Number(p.lat),
         lng: Number(p.lng),
+        badge: p.badge,
       })),
     };
   }
 
-  /**
-   * [서버 클러스터링 로직]
-   * 현행에선 호출하지 않으며, 필요 시 프론트가 하지 못하는 경우를 대비해 남겨둠
-   */
+  // 서버 클러스터링 로직
   // private async buildClusters(baseQb: SelectQueryBuilder<Pin>): Promise<Array<{ lat: number; lng: number; count: number }>> {
   //   const raw = await baseQb
   //     .select([
@@ -92,8 +98,7 @@ export class PinsService {
   //     ])
   //     .getRawMany<{ lat: string; lng: string }>();
   //
-  //   // 간단한 grid 기반 클러스터링 예시
-  //   const cellSize = 0.01; // 대략 ~1km 수준(위경도 기준 대략치), 필요 시 조정
+  //   const cellSize = 0.01;
   //   const map = new Map<string, { latSum: number; lngSum: number; count: number }>();
   //
   //   for (const r of raw) {
@@ -130,6 +135,7 @@ export class PinsService {
       const pin = pinRepo.create({
         lat: String(dto.lat),
         lng: String(dto.lng),
+        badge: dto.badge ?? null,
         addressLine: dto.addressLine,
         name: dto.name ?? null,
         province: dto.province ?? null,
@@ -182,6 +188,97 @@ export class PinsService {
           manager,
           pin.id,
           dto.units,
+        );
+      }
+
+      return { id: String(pin.id) };
+    });
+  }
+
+  async findDetail(id: string): Promise<PinResponseDto> {
+    const pin = await this.pinRepository.findOneOrFail({
+      where: { id },
+      relations: ['options', 'directions', 'areaGroups', 'units'],
+    });
+    return PinResponseDto.fromEntity(pin);
+  }
+
+  async update(id: string, dto: UpdatePinDto) {
+    return this.dataSource.transaction(async (manager) => {
+      const pinRepo = manager.getRepository(Pin);
+      const pin = await pinRepo.findOne({ where: { id } });
+      if (!pin) throw new NotFoundException('핀 없음');
+
+      if (dto.lat !== undefined || dto.lng !== undefined) {
+        if (!Number.isFinite(dto.lat))
+          throw new BadRequestException('잘못된 좌표');
+        pin.lat = String(dto.lat);
+
+        if (!Number.isFinite(dto.lng))
+          throw new BadRequestException('잘못된 lng');
+        pin.lng = String(dto.lng);
+      }
+
+      if (dto.addressLine !== undefined) pin.addressLine = dto.addressLine;
+      // if (dto.name !== undefined) pin.name = dto.name ?? null;
+      if (dto.province !== undefined) pin.province = dto.province ?? null;
+      if (dto.city !== undefined) pin.city = dto.city ?? null;
+      if (dto.district !== undefined) pin.district = dto.district ?? null;
+      if (dto.hasElevator !== undefined) pin.hasElevator = dto.hasElevator;
+
+      // 연락처
+      if (dto.contactMainLabel !== undefined)
+        pin.contactMainLabel = dto.contactMainLabel;
+      if (dto.contactMainPhone !== undefined)
+        pin.contactMainPhone = dto.contactMainPhone;
+      if (dto.contactSubLabel !== undefined)
+        pin.contactSubLabel = dto.contactSubLabel ?? null;
+      if (dto.contactSubPhone !== undefined)
+        pin.contactSubPhone = dto.contactSubPhone ?? null;
+      if (dto.badge !== undefined) pin.badge = dto.badge ?? null;
+
+      await pinRepo.save(pin);
+
+      // 옵션
+      if (dto.options !== undefined) {
+        if (dto.options === null) {
+          pin.options = null;
+          await manager.getRepository(Pin).save(pin);
+        } else {
+          await this.pinOptionsService.upsertWithManager(
+            manager,
+            pin.id,
+            dto.options,
+          );
+        }
+      }
+
+      // directions
+      if (dto.directions !== undefined) {
+        await this.pinDirectionsService.replaceForPinWithManager(
+          manager,
+          pin.id,
+          dto.directions ?? [],
+        );
+      }
+
+      // areaGroups
+      if (dto.areaGroups !== undefined) {
+        const bad = (dto.areaGroups ?? []).find(
+          (g) =>
+            (g.exclusiveMinM2 != null &&
+              g.exclusiveMaxM2 != null &&
+              g.exclusiveMinM2 > g.exclusiveMaxM2) ||
+            (g.actualMinM2 != null &&
+              g.actualMaxM2 != null &&
+              g.actualMinM2 > g.actualMaxM2),
+        );
+        if (bad) throw new BadRequestException('범위가 올바르지 않습니다.');
+
+        await this.pinAreaGroupsService.replaceForPinWithManager(
+          manager,
+          pin.id,
+          dto.areaGroups ?? [],
         );
       }
 
