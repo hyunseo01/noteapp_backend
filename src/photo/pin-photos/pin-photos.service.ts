@@ -34,7 +34,7 @@ export class PinPhotosService {
         this.repo.update(id, {
           isCover: dto.isCover,
           sortOrder: dto.sortOrder,
-          groupId: dto.moveGroupId,
+          groupId: dto.moveGroupId, // id 타입 수정 필요
         }),
       ),
     );

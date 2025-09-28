@@ -17,7 +17,7 @@ export class PinPhotoGroupsService {
   }
 
   async create(dto: CreatePinPhotoGroupDto) {
-    const group = this.repo.create(dto);
+    const group = this.repo.create(dto); //id 타입 불일치(bigint -> string) 수정 필요
     return await this.repo.save(group);
   }
 
