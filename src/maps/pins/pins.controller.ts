@@ -11,6 +11,7 @@ import { PinsService } from './pins.service';
 import { CreatePinDto } from './dto/create-pin.dto';
 import { UpdatePinDto } from './dto/update-pin.dto';
 import { MapPinsDto } from './dto/map-pins.dto';
+import { SearchPinsDto } from './dto/search-pins.dto';
 
 @Controller('pins')
 export class PinsController {
@@ -38,5 +39,11 @@ export class PinsController {
   async patch(@Param('id') id: string, @Body() dto: UpdatePinDto) {
     const data = await this.pinsService.update(id, dto);
     return { message: '핀 수정됨', data };
+  }
+
+  @Get('search')
+  async search(@Query() dto: SearchPinsDto) {
+    const data = await this.pinsService.searchPins(dto);
+    return { data };
   }
 }

@@ -20,7 +20,6 @@ export class TransformInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       map((body: OkBody | any) => {
-        // 핸들러가 이미 래핑했다면 그대로 통과
         if (body && typeof body === 'object' && 'success' in body) return body;
 
         const messages =

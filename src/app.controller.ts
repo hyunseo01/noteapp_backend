@@ -17,7 +17,7 @@ export class AppController {
           : 'fail';
 
     return {
-      messages: ['health check'],
+      messages: 'health check',
       data: {
         database: dbStatus ? 'ok' : 'fail',
         redis: redisStatus ? 'ok' : 'fail',

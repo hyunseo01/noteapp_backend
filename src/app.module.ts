@@ -3,11 +3,13 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { PinsModule } from './pins/pins.module';
-import { UnitsModule } from './units/units.module';
-import { PinDirectionsModule } from './pin-directions/pin-directions.module';
-import { PinOptionsModule } from './pin-options/pin-options.module';
-import { PinAreaGroupsModule } from './pin_area_groups/pin_area_groups.module';
+import { PinsModule } from './maps/pins/pins.module';
+import { UnitsModule } from './maps/units/units.module';
+import { PinDirectionsModule } from './maps/pin-directions/pin-directions.module';
+import { PinOptionsModule } from './maps/pin-options/pin-options.module';
+import { PinAreaGroupsModule } from './maps/pin_area_groups/pin_area_groups.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { PhotoModule } from './photo/photo.module';
 
 @Module({
   imports: [
@@ -30,6 +32,8 @@ import { PinAreaGroupsModule } from './pin_area_groups/pin_area_groups.module';
     PinDirectionsModule,
     PinOptionsModule,
     PinAreaGroupsModule,
+    DashboardModule,
+    PhotoModule,
   ],
   controllers: [AppController],
   providers: [AppService],

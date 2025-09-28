@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Brackets, DataSource, DeepPartial } from 'typeorm';
+import { Repository, Brackets, DataSource, DeepPartial, In } from 'typeorm';
 import { MapPinsDto } from './dto/map-pins.dto';
 import { Pin } from './entities/pin.entity';
 import { CreatePinDto } from './dto/create-pin.dto';
@@ -14,6 +14,7 @@ import { PinOptionsService } from '../pin-options/pin-options.service';
 import { PinAreaGroupsService } from '../pin_area_groups/pin_area_groups.service';
 import { PinResponseDto } from './dto/pin-detail.dto';
 import { UpdatePinDto } from './dto/update-pin.dto';
+import { SearchPinsDto } from './dto/search-pins.dto';
 
 // type ClusterResp = {
 //   mode: 'cluster';
@@ -22,7 +23,7 @@ import { UpdatePinDto } from './dto/update-pin.dto';
 
 type PointResp = {
   mode: 'point';
-  points: Array<{ id: string; lat: number; lng: number }>;
+  points: Array<{ id: string; lat: number; lng: number; badge: string | null }>;
 };
 
 @Injectable()
@@ -63,7 +64,7 @@ export class PinsService {
 
     // 비활성화: 서버측 클러스터링 분기
     // if (dto.zoom !== undefined && dto.zoom < 15) {
-    //   // 낮은 줌 레벨 → 서버에서 클러스터링 모드
+    //   // 낮은 줌 레벨 -> 서버에서 클러스터링 모드
     //   const clusters = await this.buildClusters(qb);
     //   return { mode: 'cluster', clusters };
     // }
@@ -156,6 +157,8 @@ export class PinsService {
           pin.id,
           dto.options,
         );
+      } else {
+        await this.pinOptionsService.ensureExistsWithDefaults(manager, pin.id);
       }
 
       // 방향 목록 교체
@@ -282,7 +285,110 @@ export class PinsService {
         );
       }
 
+      if (dto.units !== undefined) {
+        await this.unitsService.replaceForPinWithManager(
+          manager,
+          pin.id,
+          dto.units ?? [],
+        );
+      }
+
       return { id: String(pin.id) };
     });
+  }
+
+  // 필터링 검색
+  async searchPins(dto: SearchPinsDto): Promise<PinResponseDto[]> {
+    const qb = this.pinRepository
+      .createQueryBuilder('p')
+      .leftJoin('p.units', 'u')
+      .leftJoin('p.areaGroups', 'ag')
+      .where('1=1');
+
+    // 비활성 제외
+    if (this.pinRepository.metadata.findColumnWithPropertyName('isDisabled')) {
+      qb.andWhere('p.isDisabled = FALSE');
+    }
+
+    // 엘리베이터
+    if (typeof dto.hasElevator === 'boolean') {
+      qb.andWhere('p.hasElevator = :hasElevator', {
+        hasElevator: dto.hasElevator,
+      });
+    }
+
+    // 구조(유닛)
+    if (dto.rooms?.length) {
+      qb.andWhere('u.rooms IN (:...rooms)', { rooms: dto.rooms });
+    }
+    if (typeof dto.hasLoft === 'boolean') {
+      qb.andWhere('u.hasLoft = :hasLoft', { hasLoft: dto.hasLoft });
+    }
+    if (typeof dto.hasTerrace === 'boolean') {
+      qb.andWhere('u.hasTerrace = :hasTerrace', { hasTerrace: dto.hasTerrace });
+    }
+    if (dto.salePriceMin != null) {
+      qb.andWhere('u.salePrice >= :salePriceMin', {
+        salePriceMin: dto.salePriceMin,
+      });
+    }
+    if (dto.salePriceMax != null) {
+      qb.andWhere('u.salePrice <= :salePriceMax', {
+        salePriceMax: dto.salePriceMax,
+      });
+    }
+
+    // 면적
+    if (dto.areaMinM2 != null || dto.areaMaxM2 != null) {
+      qb.andWhere(
+        new Brackets((w) => {
+          if (dto.areaMinM2 != null) {
+            w.andWhere(
+              new Brackets((w2) => {
+                w2.where(
+                  '(ag.exclusiveMaxM2 IS NOT NULL AND ag.exclusiveMaxM2 >= :amin)',
+                  { amin: dto.areaMinM2 },
+                ).orWhere(
+                  '(ag.actualMaxM2 IS NOT NULL AND ag.actualMaxM2 >= :amin)',
+                  { amin: dto.areaMinM2 },
+                );
+              }),
+            );
+          }
+          if (dto.areaMaxM2 != null) {
+            w.andWhere(
+              new Brackets((w2) => {
+                w2.where(
+                  '(ag.exclusiveMinM2 IS NOT NULL AND ag.exclusiveMinM2 <= :amax)',
+                  { amax: dto.areaMaxM2 },
+                ).orWhere(
+                  '(ag.actualMinM2 IS NOT NULL AND ag.actualMinM2 <= :amax)',
+                  { amax: dto.areaMaxM2 },
+                );
+              }),
+            );
+          }
+        }),
+      );
+    }
+
+    // 중복 핀 제거
+    const rows = await qb
+      .select(['p.id AS p_id'])
+      .groupBy('p.id')
+      .orderBy('p.id', 'DESC')
+      .getRawMany<{ p_id: string }>();
+
+    const ids = rows.map((r) => r.p_id);
+
+    if (!ids.length) return [];
+
+    const pins = await this.pinRepository.find({
+      where: { id: In(ids) },
+      relations: ['options', 'directions', 'areaGroups', 'units'],
+      order: { id: 'DESC' },
+    });
+
+    return pins.map((p) => PinResponseDto.fromEntity(p));
   }
 }

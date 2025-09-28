@@ -26,10 +26,33 @@ export class UnitsService {
         baths: d.baths ?? null,
         hasLoft: d.hasLoft ?? null,
         hasTerrace: d.hasTerrace ?? null,
-        salePrice: d.salePrice ?? null, // 그대로 number 저장
+        salePrice: d.salePrice ?? null,
         note: d.note ?? null,
       }),
     );
     await unitRepo.save(rows);
+  }
+
+  async replaceForPinWithManager(
+    manager: DataSource['manager'],
+    pinId: string,
+    items: CreateUnitDto[] = [],
+  ): Promise<void> {
+    const repo = manager.getRepository(Unit);
+    await repo.delete({ pinId });
+    if (!items.length) return;
+    await repo.save(
+      items.map((d) =>
+        repo.create({
+          pinId,
+          rooms: d.rooms ?? 0,
+          baths: d.baths ?? 0,
+          hasLoft: d.hasLoft ?? false,
+          hasTerrace: d.hasTerrace ?? false,
+          salePrice: d.salePrice ?? 0,
+          note: d.note ?? null,
+        }),
+      ),
+    );
   }
 }
