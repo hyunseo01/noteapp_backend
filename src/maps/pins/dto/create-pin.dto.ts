@@ -11,12 +11,13 @@ import {
   IsArray,
   IsNotEmpty,
   IsEnum,
+  IsInt,
 } from 'class-validator';
 import { CreateUnitDto } from '../../units/dto/create-unit.dto';
 import { CreatePinOptionsDto } from '../../pin-options/dto/create-pin-option.dto';
 import { CreatePinDirectionDto } from '../../pin-directions/dto/create-pin-direction.dto';
 import { CreatePinAreaGroupDto } from '../../pin_area_groups/dto/create-pin_area_group.dto';
-import { PinBadge } from '../entities/pin.entity';
+import { BuildingType, Grade3, PinBadge } from '../entities/pin.entity';
 
 export class CreatePinDto {
   @Type(() => Number)
@@ -30,6 +31,10 @@ export class CreatePinDto {
   @Min(-180)
   @Max(180)
   lng!: number;
+
+  @IsString()
+  @Length(1, 255)
+  name!: string;
 
   @IsOptional()
   @IsEnum(PinBadge)
@@ -49,7 +54,6 @@ export class CreatePinDto {
   @Length(1, 50)
   contactMainPhone!: string;
 
-  // 서브 연락처(선택)
   @IsOptional()
   @IsString()
   @Length(1, 20)
@@ -60,38 +64,71 @@ export class CreatePinDto {
   @Length(1, 50)
   contactSubPhone?: string;
 
-  // 선택 필드들 (DB는 nullable 허용)
+  // 추가된 필드들
   @IsOptional()
-  @IsString()
-  @Length(1, 255)
-  name?: string;
+  @Type(() => Date)
+  completionDate?: Date | null;
 
   @IsOptional()
-  @IsString()
-  @Length(0, 50)
-  province?: string;
+  @IsEnum(['APT', 'OP', '주택', '근생'])
+  buildingType?: BuildingType | null;
 
   @IsOptional()
-  @IsString()
-  @Length(0, 50)
-  city?: string;
+  @IsInt()
+  @Min(0)
+  totalHouseholds?: number | null;
 
   @IsOptional()
-  @IsString()
-  @Length(0, 50)
-  district?: string;
+  @IsInt()
+  @Min(0)
+  totalParkingSlots?: number | null;
+
+  @IsOptional()
+  @IsInt()
+  registrationTypeId?: number | null;
+
+  @IsOptional()
+  @IsInt()
+  parkingTypeId?: number | null;
+
+  @IsOptional()
+  @IsEnum(['상', '중', '하'])
+  parkingGrade?: Grade3 | null;
+
+  @IsOptional()
+  @IsEnum(['상', '중', '하'])
+  slopeGrade?: Grade3 | null;
+
+  @IsOptional()
+  @IsEnum(['상', '중', '하'])
+  structureGrade?: Grade3 | null;
 
   @IsOptional()
   @IsBoolean()
   hasElevator?: boolean;
 
-  /* 핀 옵션(핀 1:1) */
+  @IsOptional()
+  @IsBoolean()
+  isOld?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isNew?: boolean;
+
+  @IsOptional()
+  @IsString()
+  publicMemo?: string | null;
+
+  @IsOptional()
+  @IsString()
+  privateMemo?: string | null;
+
+  // 옵션/유닛/방향/면적그룹
   @IsOptional()
   @ValidateNested()
   @Type(() => CreatePinOptionsDto)
   options?: CreatePinOptionsDto;
 
-  /* 유닛들(여러 개) */
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })

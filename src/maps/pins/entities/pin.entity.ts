@@ -42,6 +42,9 @@ export class Pin {
   @Column({ type: 'decimal', precision: 9, scale: 6, name: 'lng' })
   lng!: string;
 
+  @Column({ type: 'varchar', length: 255, name: 'name' })
+  name!: string;
+
   @Column({
     type: 'enum',
     enum: PinBadge,
@@ -52,15 +55,6 @@ export class Pin {
 
   @Column({ type: 'text', name: 'address_line' })
   addressLine!: string;
-
-  @Column({ type: 'varchar', length: 50, name: 'province' })
-  province!: string;
-
-  @Column({ type: 'varchar', length: 50, name: 'city' })
-  city!: string;
-
-  @Column({ type: 'varchar', length: 50, name: 'district' })
-  district!: string;
 
   @Column({ type: 'date', name: 'completion_date', nullable: true })
   completionDate: Date | null = null;

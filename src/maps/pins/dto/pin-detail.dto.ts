@@ -23,11 +23,15 @@ export class PinAreaGroupResponseDto {
   static fromEntity(entity: PinAreaGroup): PinAreaGroupResponseDto {
     return {
       title: entity.title,
-      exclusiveMinM2: Number(entity.exclusiveMinM2),
-      exclusiveMaxM2: Number(entity.exclusiveMaxM2),
-      actualMinM2: Number(entity.actualMinM2),
-      actualMaxM2: Number(entity.actualMaxM2),
-      sortOrder: Number(entity.sortOrder),
+      exclusiveMinM2: entity.exclusiveMinM2
+        ? Number(entity.exclusiveMinM2)
+        : null,
+      exclusiveMaxM2: entity.exclusiveMaxM2
+        ? Number(entity.exclusiveMaxM2)
+        : null,
+      actualMinM2: entity.actualMinM2 ? Number(entity.actualMinM2) : null,
+      actualMaxM2: entity.actualMaxM2 ? Number(entity.actualMaxM2) : null,
+      sortOrder: entity.sortOrder ?? 0,
     };
   }
 }
@@ -78,22 +82,38 @@ export class PinOptionsResponseDto {
   }
 }
 
-//최상위 DTO
+// 최상위 DTO
 export class PinResponseDto {
   id!: string;
   lat!: number;
   lng!: number;
+  name!: string;
+  badge!: string | null;
   addressLine!: string;
-  province!: string;
-  city!: string;
-  district!: string;
+
+  // 건물/기타 속성
+  completionDate!: string | null;
+  buildingType!: string | null;
+  totalHouseholds!: number | null;
+  totalParkingSlots!: number | null;
+  registrationTypeId!: number | null;
+  parkingTypeId!: number | null;
+  parkingGrade!: string | null;
+  slopeGrade!: string | null;
+  structureGrade!: string | null;
   hasElevator!: boolean | null;
+  isOld!: boolean;
+  isNew!: boolean;
+  publicMemo!: string | null;
+  privateMemo!: string | null;
+
+  // 연락처
   contactMainLabel!: string;
   contactMainPhone!: string;
   contactSubLabel!: string | null;
   contactSubPhone!: string | null;
-  badge!: string | null;
 
+  // 연관 관계
   directions!: PinDirectionResponseDto[];
   areaGroups!: PinAreaGroupResponseDto[];
   units!: UnitResponseDto[];
@@ -104,16 +124,31 @@ export class PinResponseDto {
       id: String(entity.id),
       lat: Number(entity.lat),
       lng: Number(entity.lng),
+      name: entity.name,
+      badge: entity.badge ?? null,
       addressLine: entity.addressLine,
-      province: entity.province,
-      city: entity.city,
-      district: entity.district,
+
+      completionDate: entity.completionDate
+        ? entity.completionDate.toISOString().split('T')[0]
+        : null,
+      buildingType: entity.buildingType ?? null,
+      totalHouseholds: entity.totalHouseholds,
+      totalParkingSlots: entity.totalParkingSlots,
+      registrationTypeId: entity.registrationTypeId,
+      parkingTypeId: entity.parkingTypeId,
+      parkingGrade: entity.parkingGrade,
+      slopeGrade: entity.slopeGrade,
+      structureGrade: entity.structureGrade,
       hasElevator: entity.hasElevator,
+      isOld: entity.isOld,
+      isNew: entity.isNew,
+      publicMemo: entity.publicMemo,
+      privateMemo: entity.privateMemo,
+
       contactMainLabel: entity.contactMainLabel,
       contactMainPhone: entity.contactMainPhone,
       contactSubLabel: entity.contactSubLabel,
       contactSubPhone: entity.contactSubPhone,
-      badge: entity.badge ?? null,
 
       directions:
         entity.directions?.map((d) => PinDirectionResponseDto.fromEntity(d)) ??
@@ -121,8 +156,8 @@ export class PinResponseDto {
       areaGroups:
         entity.areaGroups
           ?.sort((a, b) => a.sortOrder - b.sortOrder)
-          .map((d) => PinAreaGroupResponseDto.fromEntity(d)) ?? [],
-      units: entity.units?.map((d) => UnitResponseDto.fromEntity(d)) ?? [],
+          .map((g) => PinAreaGroupResponseDto.fromEntity(g)) ?? [],
+      units: entity.units?.map((u) => UnitResponseDto.fromEntity(u)) ?? [],
       options: entity.options
         ? PinOptionsResponseDto.fromEntity(entity.options)
         : null,

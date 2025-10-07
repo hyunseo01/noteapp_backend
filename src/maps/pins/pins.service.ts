@@ -228,16 +228,29 @@ export class PinsService {
         lng: String(dto.lng),
         badge: dto.badge ?? null,
         addressLine: dto.addressLine,
-        name: dto.name ?? null,
-        province: dto.province ?? null,
-        city: dto.city ?? null,
-        district: dto.district ?? null,
+        name: dto.name,
+        completionDate: dto.completionDate
+          ? new Date(dto.completionDate)
+          : null,
+        buildingType: dto.buildingType ?? null,
         hasElevator: dto.hasElevator ?? null,
+        totalHouseholds: dto.totalHouseholds ?? null,
+        totalParkingSlots: dto.totalParkingSlots ?? null,
+        registrationTypeId: dto.registrationTypeId ?? null,
+        parkingTypeId: dto.parkingTypeId ?? null,
+        parkingGrade: dto.parkingGrade ?? null,
+        slopeGrade: dto.slopeGrade ?? null,
+        structureGrade: dto.structureGrade ?? null,
         contactMainLabel: dto.contactMainLabel,
         contactMainPhone: dto.contactMainPhone,
         contactSubLabel: dto.contactSubLabel ?? null,
         contactSubPhone: dto.contactSubPhone ?? null,
+        isOld: dto.isOld ?? false,
+        isNew: dto.isNew ?? false,
+        publicMemo: dto.publicMemo ?? null,
+        privateMemo: dto.privateMemo ?? null,
       } as DeepPartial<Pin>);
+
       await pinRepo.save(pin);
 
       // 옵션/방향/면적그룹/유닛
@@ -306,24 +319,55 @@ export class PinsService {
       const pin = await pinRepo.findOne({ where: { id } });
       if (!pin) throw new NotFoundException('핀 없음');
 
-      if (dto.lat !== undefined || dto.lng !== undefined) {
+      // 좌표
+      if (dto.lat !== undefined) {
         if (!Number.isFinite(dto.lat))
           throw new BadRequestException('잘못된 좌표');
         pin.lat = String(dto.lat);
-
+      }
+      if (dto.lng !== undefined) {
         if (!Number.isFinite(dto.lng))
           throw new BadRequestException('잘못된 lng');
         pin.lng = String(dto.lng);
       }
 
+      // 기본 정보
       if (dto.addressLine !== undefined) pin.addressLine = dto.addressLine;
-      // if (dto.name !== undefined) pin.name = dto.name ?? null;
-      if (dto.province !== undefined) pin.province = dto.province ?? null;
-      if (dto.city !== undefined) pin.city = dto.city ?? null;
-      if (dto.district !== undefined) pin.district = dto.district ?? null;
+      if (dto.name !== undefined) pin.name = dto.name ?? null;
+
+      // 건물 정보
+      if (dto.completionDate !== undefined) {
+        pin.completionDate = dto.completionDate
+          ? new Date(dto.completionDate)
+          : null;
+      }
+      if (dto.buildingType !== undefined)
+        pin.buildingType = dto.buildingType ?? null;
       if (dto.hasElevator !== undefined) pin.hasElevator = dto.hasElevator;
 
-      // 연락처
+      if (dto.totalHouseholds !== undefined)
+        pin.totalHouseholds = dto.totalHouseholds ?? null;
+      if (dto.totalParkingSlots !== undefined)
+        pin.totalParkingSlots = dto.totalParkingSlots ?? null;
+      if (dto.registrationTypeId !== undefined)
+        pin.registrationTypeId = dto.registrationTypeId ?? null;
+      if (dto.parkingTypeId !== undefined)
+        pin.parkingTypeId = dto.parkingTypeId ?? null;
+
+      if (dto.parkingGrade !== undefined)
+        pin.parkingGrade = dto.parkingGrade ?? null;
+      if (dto.slopeGrade !== undefined) pin.slopeGrade = dto.slopeGrade ?? null;
+      if (dto.structureGrade !== undefined)
+        pin.structureGrade = dto.structureGrade ?? null;
+
+      if (dto.isOld !== undefined) pin.isOld = dto.isOld;
+      if (dto.isNew !== undefined) pin.isNew = dto.isNew;
+
+      if (dto.publicMemo !== undefined) pin.publicMemo = dto.publicMemo ?? null;
+      if (dto.privateMemo !== undefined)
+        pin.privateMemo = dto.privateMemo ?? null;
+
+      // 연락처 & 배지
       if (dto.contactMainLabel !== undefined)
         pin.contactMainLabel = dto.contactMainLabel;
       if (dto.contactMainPhone !== undefined)
@@ -340,7 +384,7 @@ export class PinsService {
       if (dto.options !== undefined) {
         if (dto.options === null) {
           pin.options = null;
-          await manager.getRepository(Pin).save(pin);
+          await pinRepo.save(pin);
         } else {
           await this.pinOptionsService.upsertWithManager(
             manager,
@@ -350,7 +394,7 @@ export class PinsService {
         }
       }
 
-      // directions
+      // 방향
       if (dto.directions !== undefined) {
         await this.pinDirectionsService.replaceForPinWithManager(
           manager,
@@ -359,7 +403,7 @@ export class PinsService {
         );
       }
 
-      // areaGroups
+      // 면적 그룹 (범위 검증 포함)
       if (dto.areaGroups !== undefined) {
         const bad = (dto.areaGroups ?? []).find(
           (g) =>
@@ -379,6 +423,7 @@ export class PinsService {
         );
       }
 
+      // 유닛
       if (dto.units !== undefined) {
         await this.unitsService.replaceForPinWithManager(
           manager,
