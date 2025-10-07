@@ -203,6 +203,7 @@ export class PinsService {
       const pinRepo = manager.getRepository(Pin);
 
       // 임시핀 자동 매칭
+      // 해당 로직 추후 수정 필요
       const EPS = 0.00001; // 오차범위
       const draftRepo = manager.getRepository(PinDraft);
 
@@ -218,10 +219,10 @@ export class PinsService {
           lngMax: dto.lng + EPS,
         })
         .orderBy('d.createdAt', 'DESC')
-        .setLock('pessimistic_write') // 경합 방지
+        .setLock('pessimistic_write')
         .getOne();
 
-      // 핀 본체 저장 (네 기존 로직 유지)
+      // 핀 저장
       const pin = pinRepo.create({
         lat: String(dto.lat),
         lng: String(dto.lng),
