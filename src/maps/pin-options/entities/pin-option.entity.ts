@@ -17,8 +17,8 @@ export class PinOption {
   @Column({ type: 'bigint', unsigned: true, name: 'pin_id' })
   pinId!: string;
 
-  @OneToOne(() => Pin, (p) => p.options, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'pin_id' })
+  @OneToOne(() => Pin, (pin) => pin.options, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'pin_id', referencedColumnName: 'id' })
   pin!: Pin;
 
   @Column({ type: 'boolean', name: 'has_aircon', default: false })

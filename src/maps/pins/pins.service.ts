@@ -15,15 +15,43 @@ import { PinAreaGroupsService } from '../pin_area_groups/pin_area_groups.service
 import { PinResponseDto } from './dto/pin-detail.dto';
 import { UpdatePinDto } from './dto/update-pin.dto';
 import { SearchPinsDto } from './dto/search-pins.dto';
+import { PinDraft } from '../../survey-reservations/entities/pin-draft.entity';
+import { SurveyReservation } from '../../common/entities/survey-reservation.entity';
 
 // type ClusterResp = {
 //   mode: 'cluster';
 //   clusters: Array<{ lat: number; lng: number; count: number }>;
 // };
 
+export const decimalToNumber = {
+  to: (v?: number | null) => v,
+  from: (v: string | null) => (v == null ? null : Number(v)),
+};
+
+type DraftMarker = {
+  id: string;
+  lat: number;
+  lng: number;
+  draftState: 'BEFORE' | 'SCHEDULED';
+};
+
 type PointResp = {
   mode: 'point';
-  points: Array<{ id: string; lat: number; lng: number; badge: string | null }>;
+  points: { id: string; lat: number; lng: number; badge: string | null }[];
+  drafts: DraftMarker[];
+};
+
+type DraftSearchItem = {
+  id: string;
+  lat: number;
+  lng: number;
+  addressLine: string;
+  draftState: 'BEFORE' | 'SCHEDULED';
+};
+
+type SearchResp = {
+  pins: PinResponseDto[];
+  drafts: DraftSearchItem[];
 };
 
 @Injectable()
@@ -56,7 +84,7 @@ export class PinsService {
     if (typeof favoriteOnly === 'boolean' && favoriteOnly) {
       qb.andWhere(
         new Brackets((w) => {
-          // 예: 현재 사용자 기준 즐겨찾기 여부. 실제 컬럼/관계명에 맞게 수정하세요.
+          // 추후 로직 추가
           w.where('p.is_favorite = TRUE');
         }),
       );
@@ -70,7 +98,12 @@ export class PinsService {
     // }
 
     const points = await qb
-      .select(['p.id', 'p.lat', 'p.lng', 'p.badge'])
+      .select([
+        'p.id AS id',
+        'p.lat AS lat',
+        'p.lng AS lng',
+        'p.badge AS badge',
+      ])
       .orderBy('p.id', 'DESC')
       .getRawMany<{
         id: string;
@@ -78,6 +111,42 @@ export class PinsService {
         lng: string;
         badge: string | null;
       }>();
+
+    const draftRepo = this.pinRepository.manager.getRepository(PinDraft);
+
+    const draftsRaw = await draftRepo
+      .createQueryBuilder('d')
+      .select(['d.id AS id', 'd.lat AS lat', 'd.lng AS lng'])
+      .where('d.isActive = 1')
+      .andWhere('d.lat BETWEEN :swLat AND :neLat', { swLat, neLat })
+      .andWhere('d.lng BETWEEN :swLng AND :neLng', { swLng, neLng })
+      .orderBy('d.createdAt', 'DESC')
+      .getRawMany<{ id: string; lat: string; lng: string }>();
+
+    // 예약 존재 여부로 draftState 계산
+    const draftIds = draftsRaw.map((d) => d.id);
+    let drafts: DraftMarker[] = [];
+
+    if (draftIds.length > 0) {
+      const resvRepo =
+        this.pinRepository.manager.getRepository(SurveyReservation);
+
+      const resvRows = await resvRepo
+        .createQueryBuilder('r')
+        .select(['r.pinDraft AS pinDraftId'])
+        .where('r.pinDraft IN (:...ids)', { ids: draftIds })
+        .andWhere('r.isDeleted = 0')
+        .groupBy('r.pinDraft')
+        .getRawMany<{ pinDraftId: string }>();
+
+      const hasResv = new Set(resvRows.map((r) => String(r.pinDraftId)));
+      drafts = draftsRaw.map((d) => ({
+        id: String(d.id),
+        lat: Number(d.lat),
+        lng: Number(d.lng),
+        draftState: hasResv.has(String(d.id)) ? 'SCHEDULED' : 'BEFORE',
+      }));
+    }
 
     return {
       mode: 'point',
@@ -87,6 +156,7 @@ export class PinsService {
         lng: Number(p.lng),
         badge: p.badge,
       })),
+      drafts,
     };
   }
 
@@ -132,7 +202,26 @@ export class PinsService {
     return this.dataSource.transaction(async (manager) => {
       const pinRepo = manager.getRepository(Pin);
 
-      // 핀 본체 저장
+      // 임시핀 자동 매칭
+      const EPS = 0.00001; // 오차범위
+      const draftRepo = manager.getRepository(PinDraft);
+
+      const candidate = await draftRepo
+        .createQueryBuilder('d')
+        .where('d.isActive = 1')
+        .andWhere('d.lat BETWEEN :latMin AND :latMax', {
+          latMin: dto.lat - EPS,
+          latMax: dto.lat + EPS,
+        })
+        .andWhere('d.lng BETWEEN :lngMin AND :lngMax', {
+          lngMin: dto.lng - EPS,
+          lngMax: dto.lng + EPS,
+        })
+        .orderBy('d.createdAt', 'DESC')
+        .setLock('pessimistic_write') // 경합 방지
+        .getOne();
+
+      // 핀 본체 저장 (네 기존 로직 유지)
       const pin = pinRepo.create({
         lat: String(dto.lat),
         lng: String(dto.lng),
@@ -150,7 +239,7 @@ export class PinsService {
       } as DeepPartial<Pin>);
       await pinRepo.save(pin);
 
-      // 옵션
+      // 옵션/방향/면적그룹/유닛
       if (dto.options) {
         await this.pinOptionsService.upsertWithManager(
           manager,
@@ -161,7 +250,6 @@ export class PinsService {
         await this.pinOptionsService.ensureExistsWithDefaults(manager, pin.id);
       }
 
-      // 방향 목록 교체
       if (Array.isArray(dto.directions)) {
         const norm = dto.directions
           .map((d) => ({ direction: (d.direction ?? '').trim() }))
@@ -176,7 +264,6 @@ export class PinsService {
         );
       }
 
-      // 전용/실평 범위
       if (Array.isArray(dto.areaGroups)) {
         await this.pinAreaGroupsService.replaceForPinWithManager(
           manager,
@@ -185,7 +272,6 @@ export class PinsService {
         );
       }
 
-      // 구조 (방/욕실/복층/테라스/표시가) 생성
       if (Array.isArray(dto.units) && dto.units.length > 0) {
         await this.unitsService.bulkCreateWithManager(
           manager,
@@ -194,7 +280,14 @@ export class PinsService {
         );
       }
 
-      return { id: String(pin.id) };
+      // 매칭된 임시핀 있으면 비활성화(승격 처리)
+      if (candidate) {
+        await draftRepo.update(candidate.id, {
+          isActive: false,
+        });
+      }
+
+      return { id: String(pin.id), matchedDraftId: candidate?.id ?? null };
     });
   }
 
@@ -298,7 +391,7 @@ export class PinsService {
   }
 
   // 필터링 검색
-  async searchPins(dto: SearchPinsDto): Promise<PinResponseDto[]> {
+  async searchPins(dto: SearchPinsDto): Promise<SearchResp> {
     const qb = this.pinRepository
       .createQueryBuilder('p')
       .leftJoin('p.units', 'u')
@@ -380,15 +473,96 @@ export class PinsService {
       .getRawMany<{ p_id: string }>();
 
     const ids = rows.map((r) => r.p_id);
+    let pins: PinResponseDto[] = [];
 
-    if (!ids.length) return [];
+    if (ids.length) {
+      const entities = await this.pinRepository.find({
+        where: { id: In(ids) },
+        relations: ['options', 'directions', 'areaGroups', 'units'],
+        order: { id: 'DESC' },
+      });
+      pins = entities.map((p) => PinResponseDto.fromEntity(p));
+    }
 
-    const pins = await this.pinRepository.find({
-      where: { id: In(ids) },
-      relations: ['options', 'directions', 'areaGroups', 'units'],
-      order: { id: 'DESC' },
+    // 임시핀
+    const hasAnyFilter =
+      typeof dto.hasElevator === 'boolean' ||
+      (dto.rooms?.length ?? 0) > 0 ||
+      typeof dto.hasLoft === 'boolean' ||
+      typeof dto.hasTerrace === 'boolean' ||
+      dto.salePriceMin != null ||
+      dto.salePriceMax != null ||
+      dto.areaMinM2 != null ||
+      dto.areaMaxM2 != null;
+
+    let drafts: DraftSearchItem[] = [];
+
+    if (!hasAnyFilter) {
+      const draftRepo = this.pinRepository.manager.getRepository(PinDraft);
+      const draftsRaw = await draftRepo
+        .createQueryBuilder('d')
+        .select([
+          'd.id AS id',
+          'd.lat AS lat',
+          'd.lng AS lng',
+          'd.addressLine AS addressLine',
+        ])
+        .where('d.isActive = 1')
+        .orderBy('d.createdAt', 'DESC')
+        .getRawMany<{
+          id: string;
+          lat: string;
+          lng: string;
+          addressLine: string;
+        }>();
+
+      const draftIds = draftsRaw.map((d) => d.id);
+      if (draftIds.length) {
+        const resvRepo =
+          this.pinRepository.manager.getRepository(SurveyReservation);
+        const resvRows = await resvRepo
+          .createQueryBuilder('r')
+          .select(['r.pinDraft AS pinDraftId'])
+          .where('r.pinDraft IN (:...ids)', { ids: draftIds })
+          .andWhere('r.isDeleted = 0')
+          .groupBy('r.pinDraft')
+          .getRawMany<{ pinDraftId: string }>();
+
+        const hasResv = new Set(resvRows.map((r) => String(r.pinDraftId)));
+        drafts = draftsRaw.map((d) => ({
+          id: String(d.id),
+          lat: Number(d.lat),
+          lng: Number(d.lng),
+          addressLine: d.addressLine,
+          draftState: hasResv.has(String(d.id)) ? 'SCHEDULED' : 'BEFORE',
+        }));
+      }
+    }
+    return { pins, drafts };
+  }
+
+  // 핀 비활성
+  async setDisabled(id: number, isDisabled: boolean) {
+    return this.dataSource.transaction(async (m) => {
+      const repo = m.getRepository(Pin);
+
+      // 컬럼 존재 확인
+      const col = repo.metadata.findColumnWithPropertyName('isDisabled');
+      if (!col) throw new BadRequestException('isDisabled 컬럼이 없습니다.');
+
+      const pin = await repo.findOne({ where: { id: String(id) } });
+      if (!pin) throw new NotFoundException('핀을 찾을 수 없습니다.');
+
+      const already = pin.isDisabled === isDisabled;
+      if (!already) {
+        await repo.update(String(id), { isDisabled });
+      }
+
+      return {
+        id: String(id),
+        isDisabled,
+        changed: !already,
+      };
     });
-
-    return pins.map((p) => PinResponseDto.fromEntity(p));
   }
 }

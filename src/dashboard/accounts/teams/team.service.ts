@@ -5,14 +5,17 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Team } from './entities/team.entity';
-import { CreateTeamDto } from './dto/create-team.dto';
-import { UpdateTeamDto } from './dto/update-team.dto';
+import { Team } from '../entities/team.entity';
+import { CreateTeamDto } from '../dto/create-team.dto';
+import { UpdateTeamDto } from '../dto/update-team.dto';
+import { TeamMember } from '../entities/team-member.entity';
 
 @Injectable()
 export class TeamService {
   constructor(
     @InjectRepository(Team) private readonly teamRepository: Repository<Team>,
+    @InjectRepository(TeamMember)
+    private readonly teamMemberRepository: Repository<TeamMember>,
   ) {}
 
   async create(dto: CreateTeamDto) {
@@ -77,7 +80,16 @@ export class TeamService {
   }
 
   async remove(id: string) {
-    const team = await this.get(id);
+    const team = await this.teamRepository.findOne({ where: { id } });
+    if (!team) throw new NotFoundException('지정한 팀을 찾을 수 없습니다.');
+
+    const members = await this.teamMemberRepository.count({
+      where: { team_id: id },
+    });
+    if (members > 0) {
+      throw new ConflictException('팀에 멤버가 있어 삭제할 수 없습니다.');
+    }
+
     await this.teamRepository.remove(team);
     return { id };
   }

@@ -1,23 +1,44 @@
 import { Module } from '@nestjs/common';
-import { AccountsService } from './accounts.service';
-import { AccountsController } from './accounts.controller';
-import { TeamMember } from './entities/team-member.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AccountCredential } from './entities/account-credential.entity';
 import { Account } from './entities/account.entity';
+import { AccountCredential } from './entities/account-credential.entity';
 import { Team } from './entities/team.entity';
+import { TeamMember } from './entities/team-member.entity';
+
+import { CredentialsController } from './credentials/credentials.controller';
+import { CredentialsService } from './credentials/credentials.service';
+import { EmployeeInfoController } from './employee-info/employee-info.controller';
+import { EmployeeInfoService } from './employee-info/employee-info.service';
+import { TeamController } from './teams/team.controller';
+import { TeamService } from './teams/team.service';
+import { TeamMemberController } from './team-members/team-member.controller';
+import { TeamMemberService } from './team-members/team-member.service';
 import { BcryptService } from '../../common/hashing/bcrypt.service';
-import { TeamService } from './team.service';
-import { TeamController } from './team.controller';
-import { AccountsInfoController } from './accounts-info.controllers';
-import { EmployeeInfoService } from './employee-info.service';
+import { BcryptModule } from '../../common/hashing/bcrypt.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([AccountCredential, Account, Team, TeamMember]),
+    TypeOrmModule.forFeature([Account, AccountCredential, Team, TeamMember]),
+    BcryptModule,
   ],
-  controllers: [AccountsController, TeamController, AccountsInfoController],
-  providers: [AccountsService, TeamService, BcryptService, EmployeeInfoService],
-  exports: [AccountsService, TeamService, BcryptService],
+  controllers: [
+    CredentialsController,
+    EmployeeInfoController,
+    TeamController,
+    TeamMemberController,
+  ],
+  providers: [
+    CredentialsService,
+    EmployeeInfoService,
+    TeamService,
+    TeamMemberService,
+    BcryptService,
+  ],
+  exports: [
+    CredentialsService,
+    EmployeeInfoService,
+    TeamService,
+    TeamMemberService,
+  ],
 })
 export class AccountsModule {}

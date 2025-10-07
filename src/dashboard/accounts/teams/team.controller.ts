@@ -1,22 +1,23 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
   Post,
-  Delete,
   UseGuards,
 } from '@nestjs/common';
-import { SessionAuthGuard } from '../auth/guards/session-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { SessionAuthGuard } from '../../auth/guards/session-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { SystemRole } from '../types/roles';
+import { CreateTeamDto } from '../dto/create-team.dto';
+import { UpdateTeamDto } from '../dto/update-team.dto';
 import { TeamService } from './team.service';
-import { CreateTeamDto } from './dto/create-team.dto';
-import { UpdateTeamDto } from './dto/update-team.dto';
 
 @UseGuards(SessionAuthGuard, RolesGuard)
-@Roles('admin')
+@Roles(SystemRole.ADMIN)
 @Controller('dashboard/accounts/teams')
 export class TeamController {
   constructor(private readonly service: TeamService) {}

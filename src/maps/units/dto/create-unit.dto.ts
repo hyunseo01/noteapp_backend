@@ -26,7 +26,13 @@ export class CreateUnitDto {
   @Type(() => Number)
   @IsInt()
   @Min(0)
-  salePrice?: number;
+  minPrice?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  maxPrice?: number;
 
   @IsOptional()
   @IsString()

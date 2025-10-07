@@ -1,10 +1,24 @@
 import { Body, Controller, Get, Post, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SigninDto } from './dto/signin.dto';
+import { BootstrapAdminDto } from './dto/bootstrap-admin.dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly service: AuthService) {}
+
+  @Post('bootstrap-admin')
+  async bootstrapAdmin(@Body() dto: BootstrapAdminDto, @Req() req: Request) {
+    const token = req.headers['x-bootstrap-token'] as string | undefined;
+
+    const data = await this.service.bootstrapAdmin(
+      dto.email,
+      dto.password,
+      token,
+    );
+
+    return { message: '관리자 부트스트랩 완료', data };
+  }
 
   @Post('signin')
   async signin(@Body() dto: SigninDto, @Req() req: any) {

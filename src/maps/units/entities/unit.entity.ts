@@ -35,8 +35,11 @@ export class Unit {
   @Column({ type: 'boolean', name: 'has_terrace', nullable: true })
   hasTerrace: boolean | null = null;
 
-  @Column({ type: 'bigint', name: 'sale_price', nullable: true })
-  salePrice: number | null = null;
+  @Column({ type: 'bigint', name: 'min_price', nullable: true })
+  minPrice: number | null = null;
+
+  @Column({ type: 'bigint', name: 'max_price', nullable: true })
+  maxPrice: number | null = null;
 
   @Column({ type: 'varchar', length: 255, name: 'note', nullable: true })
   note: string | null = null;

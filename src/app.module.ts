@@ -10,6 +10,7 @@ import { PinOptionsModule } from './maps/pin-options/pin-options.module';
 import { PinAreaGroupsModule } from './maps/pin_area_groups/pin_area_groups.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { PhotoModule } from './photo/photo.module';
+import { SurveyReservationsModule } from './survey-reservations/survey-reservations.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { PhotoModule } from './photo/photo.module';
     PinAreaGroupsModule,
     DashboardModule,
     PhotoModule,
+    SurveyReservationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

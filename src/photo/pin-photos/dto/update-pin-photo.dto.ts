@@ -1,4 +1,10 @@
-import { IsArray, IsBoolean, IsInt, IsOptional } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsInt,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class UpdatePinPhotoDto {
   @IsArray()
@@ -14,6 +20,6 @@ export class UpdatePinPhotoDto {
   sortOrder?: number;
 
   @IsOptional()
-  @IsInt()
-  moveGroupId?: number;
+  @IsString()
+  moveGroupId?: string;
 }

@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -12,6 +13,7 @@ import { CreatePinDto } from './dto/create-pin.dto';
 import { UpdatePinDto } from './dto/update-pin.dto';
 import { MapPinsDto } from './dto/map-pins.dto';
 import { SearchPinsDto } from './dto/search-pins.dto';
+import { UpdatePinDisableDto } from './dto/update-pin-disable.dto';
 
 @Controller('pins')
 export class PinsController {
@@ -21,6 +23,12 @@ export class PinsController {
   async create(@Body() dto: CreatePinDto) {
     const data = await this.pinsService.create(dto);
     return { message: '핀 생성됨', data };
+  }
+
+  @Get('search')
+  async search(@Query() dto: SearchPinsDto) {
+    const data = await this.pinsService.searchPins(dto);
+    return { data };
   }
 
   @Get('map')
@@ -41,9 +49,12 @@ export class PinsController {
     return { message: '핀 수정됨', data };
   }
 
-  @Get('search')
-  async search(@Query() dto: SearchPinsDto) {
-    const data = await this.pinsService.searchPins(dto);
-    return { data };
+  @Patch(':id/disable')
+  async setDisabled(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdatePinDisableDto,
+  ) {
+    const data = await this.pinsService.setDisabled(id, dto.isDisabled);
+    return { message: '핀 활성 상태 변경', data };
   }
 }

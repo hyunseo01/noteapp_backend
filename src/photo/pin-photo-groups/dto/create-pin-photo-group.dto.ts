@@ -10,7 +10,7 @@ import {
 export class CreatePinPhotoGroupDto {
   @IsNotEmpty()
   @IsInt()
-  pinId!: number;
+  pinId!: string;
 
   @IsString()
   @Length(1, 100)

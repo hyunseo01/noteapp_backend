@@ -1,5 +1,18 @@
-import { IsNumber, IsOptional, Min, Max, IsBoolean } from 'class-validator';
+import {
+  IsNumber,
+  IsOptional,
+  Min,
+  Max,
+  IsBoolean,
+  IsEnum,
+} from 'class-validator';
 import { Type } from 'class-transformer';
+
+export enum DraftStateFilter {
+  BEFORE = 'before',
+  SCHEDULED = 'scheduled',
+  ALL = 'all',
+}
 
 export class MapPinsDto {
   /** 남서(SW) */
@@ -49,4 +62,8 @@ export class MapPinsDto {
   @IsOptional()
   @IsBoolean()
   favoriteOnly?: boolean;
+
+  @IsOptional()
+  @IsEnum(DraftStateFilter)
+  draftState?: DraftStateFilter;
 }

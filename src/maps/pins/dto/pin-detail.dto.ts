@@ -37,7 +37,8 @@ export class UnitResponseDto {
   baths!: number | null;
   hasLoft!: boolean | null;
   hasTerrace!: boolean | null;
-  salePrice!: number | null;
+  minPrice!: number | null;
+  maxPrice!: number | null;
   note!: string | null;
 
   static fromEntity(entity: Unit): UnitResponseDto {
@@ -46,7 +47,8 @@ export class UnitResponseDto {
       baths: entity.baths,
       hasLoft: entity.hasLoft,
       hasTerrace: entity.hasTerrace,
-      salePrice: entity.salePrice,
+      minPrice: entity.minPrice,
+      maxPrice: entity.maxPrice,
       note: entity.note,
     };
   }

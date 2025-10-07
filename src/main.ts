@@ -21,10 +21,7 @@ async function bootstrap() {
 
   //CORS
   app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      //'https://프론트 경로',
-    ],
+    origin: ['*', true],
     credentials: true,
   });
 

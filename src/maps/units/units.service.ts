@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { Unit } from './entities/unit.entity';
@@ -11,6 +11,16 @@ export class UnitsService {
     private readonly dataSource: DataSource,
   ) {}
 
+  private assertPriceRange(d: CreateUnitDto) {
+    if (
+      typeof d.minPrice === 'number' &&
+      typeof d.maxPrice === 'number' &&
+      d.minPrice > d.maxPrice
+    ) {
+      throw new BadRequestException('minPrice가 maxPrice보다 클 수 없습니다');
+    }
+  }
+
   async bulkCreateWithManager(
     manager: DataSource['manager'],
     pinId: string,
@@ -19,17 +29,20 @@ export class UnitsService {
     if (!items?.length) return;
 
     const unitRepo = manager.getRepository(Unit);
-    const rows = items.map((d) =>
-      unitRepo.create({
+    const rows = items.map((d) => {
+      this.assertPriceRange(d);
+      return unitRepo.create({
         pinId,
         rooms: d.rooms ?? null,
         baths: d.baths ?? null,
         hasLoft: d.hasLoft ?? null,
         hasTerrace: d.hasTerrace ?? null,
-        salePrice: d.salePrice ?? null,
+        minPrice: d.minPrice ?? null,
+        maxPrice: d.maxPrice ?? null,
         note: d.note ?? null,
-      }),
-    );
+      });
+    });
+
     await unitRepo.save(rows);
   }
 
@@ -41,18 +54,21 @@ export class UnitsService {
     const repo = manager.getRepository(Unit);
     await repo.delete({ pinId });
     if (!items.length) return;
+
     await repo.save(
-      items.map((d) =>
-        repo.create({
+      items.map((d) => {
+        this.assertPriceRange(d);
+        return repo.create({
           pinId,
-          rooms: d.rooms ?? 0,
-          baths: d.baths ?? 0,
-          hasLoft: d.hasLoft ?? false,
-          hasTerrace: d.hasTerrace ?? false,
-          salePrice: d.salePrice ?? 0,
+          rooms: d.rooms ?? null,
+          baths: d.baths ?? null,
+          hasLoft: d.hasLoft ?? null,
+          hasTerrace: d.hasTerrace ?? null,
+          minPrice: d.minPrice ?? null,
+          maxPrice: d.maxPrice ?? null,
           note: d.note ?? null,
-        }),
-      ),
+        });
+      }),
     );
   }
 }

@@ -5,7 +5,6 @@ import {
   OneToMany,
   Index,
   OneToOne,
-  JoinColumn,
 } from 'typeorm';
 import { PinDirection } from '../../pin-directions/entities/pin-direction.entity';
 import { Unit } from '../../units/entities/unit.entity';
@@ -38,7 +37,7 @@ export class Pin {
   id!: string;
 
   @Column({ type: 'decimal', precision: 9, scale: 6, name: 'lat' })
-  lat!: string; // DECIMAL은 string 권장
+  lat!: string;
 
   @Column({ type: 'decimal', precision: 9, scale: 6, name: 'lng' })
   lng!: string;
@@ -157,13 +156,11 @@ export class Pin {
   @Column({ type: 'text', name: 'private_memo', nullable: true })
   privateMemo: string | null = null;
 
-  @OneToOne(() => PinOption, (o) => o.pin, {
-    cascade: true,
-    nullable: true,
-    eager: true,
-  })
-  @JoinColumn({ name: 'pin_option_id' })
-  options: PinOption | null = null;
+  @OneToOne(() => PinOption, (opt) => opt.pin)
+  options!: PinOption | null;
+
+  @Column({ type: 'boolean', name: 'is_disabled', default: false })
+  isDisabled!: boolean;
 
   @Column({
     type: 'bigint',
