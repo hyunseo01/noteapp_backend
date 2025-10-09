@@ -49,7 +49,7 @@ export class PinsController {
     return { message: '핀 수정됨', data };
   }
 
-  @Patch(':id/disable')
+  @Patch('disable/:id')
   async setDisabled(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdatePinDisableDto,
