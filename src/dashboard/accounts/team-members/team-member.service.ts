@@ -12,6 +12,7 @@ import { Account } from '../entities/account.entity';
 import { AccountCredential } from '../entities/account-credential.entity';
 import { AssignTeamMemberDto } from '../dto/assign-team-member.dto';
 import { PatchTeamMemberDto } from '../dto/patch-team-member.dto';
+import { TeamRole } from '../types/roles';
 
 @Injectable()
 export class TeamMemberService {
@@ -27,7 +28,6 @@ export class TeamMemberService {
     private readonly credentialRepository: Repository<AccountCredential>,
   ) {}
 
-  // POST /team-members
   async assignTeamMember(dto: AssignTeamMemberDto) {
     const team = await this.teamRepository.findOne({
       where: { id: dto.teamId, is_active: true },
@@ -69,7 +69,6 @@ export class TeamMemberService {
     return saved;
   }
 
-  // PATCH /team-members/:memberId
   async updateTeamMember(memberId: string, dto: PatchTeamMemberDto) {
     const tm = await this.teamMemberRepository.findOne({
       where: { id: memberId },
@@ -78,7 +77,7 @@ export class TeamMemberService {
 
     // 역할 변경
     if (dto.teamRole) {
-      if (dto.teamRole === 'manager') {
+      if (dto.teamRole === TeamRole.MANAGER) {
         const exists = await this.teamMemberRepository.findOne({
           where: { team_id: tm.team_id, team_role: 'manager' },
         });
@@ -111,7 +110,6 @@ export class TeamMemberService {
     return saved;
   }
 
-  // DELETE /team-members/:memberId
   async removeTeamMember(memberId: string) {
     const tm = await this.teamMemberRepository.findOne({
       where: { id: memberId },
@@ -121,7 +119,6 @@ export class TeamMemberService {
     return { id: memberId };
   }
 
-  // POST /teams/:teamId/replace-manager
   async replaceTeamManager(teamId: string, newCredentialId: string) {
     return this.dataSource.transaction(async (tx) => {
       const tmRepo = tx.getRepository(TeamMember);

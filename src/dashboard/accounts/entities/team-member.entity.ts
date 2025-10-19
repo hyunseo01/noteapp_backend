@@ -29,7 +29,7 @@ export class TeamMember {
   @JoinColumn({ name: 'account_id' })
   account!: Account;
 
-  @Column({ type: 'enum', enum: ['owner', 'manager', 'staff'] })
+  @Column({ type: 'enum', enum: ['manager', 'staff'] })
   team_role!: TeamRole;
 
   @Column({ type: 'boolean', default: false })

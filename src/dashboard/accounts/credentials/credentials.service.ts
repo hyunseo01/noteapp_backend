@@ -35,7 +35,6 @@ export class CredentialsService {
     private readonly bcrypt: BcryptService,
   ) {}
 
-  // POST /dashboard/accounts/credentials
   async createCredential(dto: CreateAccountDto): Promise<SafeCredential> {
     return this.dataSource.transaction(async (tx) => {
       const credRepo = tx.getRepository(AccountCredential);
@@ -122,9 +121,7 @@ export class CredentialsService {
     });
   }
 
-  // GET /dashboard/accounts/credentials
   async listAllCredentials() {
-    // AccountCredential ←→ Account 는 FK(credential_id) 기반으로 조인
     const rows = await this.accountCredentialRepository
       .createQueryBuilder('cred')
       .leftJoinAndMapOne(
@@ -146,7 +143,6 @@ export class CredentialsService {
     }));
   }
 
-  // PATCH /dashboard/accounts/credentials/:id/disable
   async setCredentialDisabled(id: string, disabled: boolean) {
     const cred = await this.accountCredentialRepository.findOne({
       where: { id },
@@ -157,7 +153,6 @@ export class CredentialsService {
     return { id: cred.id, disabled: cred.is_disabled };
   }
 
-  // PATCH /dashboard/accounts/credentials/:id/role
   async setCredentialRole(id: string, role: 'admin' | 'manager' | 'staff') {
     const cred = await this.accountCredentialRepository.findOne({
       where: { id },
@@ -166,5 +161,79 @@ export class CredentialsService {
     cred.role = role;
     await this.accountCredentialRepository.save(cred);
     return { id: cred.id, role: cred.role };
+  }
+
+  async getCredentialDetail(id: string) {
+    const raw = await this.accountCredentialRepository
+      .createQueryBuilder('cred')
+      .leftJoin(Account, 'acc', 'acc.credential_id = cred.id')
+      .leftJoin(TeamMember, 'tm', 'tm.account_id = acc.id')
+      .leftJoin(Team, 'team', 'team.id = tm.team_id')
+      .select([
+        'cred.id AS cred_id',
+        'cred.email AS cred_email',
+        'cred.role AS cred_role',
+        'cred.is_disabled AS cred_is_disabled',
+
+        'acc.id AS acc_id',
+        'acc.name AS acc_name',
+        'acc.phone AS acc_phone',
+        'acc.emergency_contact AS acc_emergency_contact',
+        'acc.address_line AS acc_address_line',
+        'acc.salary_bank_name AS acc_salary_bank_name',
+        'acc.salary_account AS acc_salary_account',
+        'acc.profile_url AS acc_profile_url',
+        'acc.is_profile_completed AS acc_is_profile_completed',
+        'acc.is_deleted AS acc_is_deleted',
+        'acc.deleted_at AS acc_deleted_at',
+
+        'team.id AS team_id',
+        'team.name AS team_name',
+        'team.code AS team_code',
+        'team.is_active AS team_is_active',
+
+        'tm.team_role AS tm_team_role',
+        'tm.is_primary AS tm_is_primary',
+        'tm.joined_at AS tm_joined_at',
+      ])
+      .where('cred.id = :id', { id })
+      .getRawOne();
+
+    if (!raw) throw new NotFoundException('계정을 찾을 수 없습니다.');
+
+    return {
+      id: raw.cred_id,
+      email: raw.cred_email,
+      role: raw.cred_role,
+      disabled: !!raw.cred_is_disabled,
+
+      account: raw.acc_id
+        ? {
+            id: raw.acc_id,
+            name: raw.acc_name,
+            phone: raw.acc_phone,
+            emergencyContact: raw.acc_emergency_contact,
+            address: raw.acc_address_line,
+            salaryBankName: raw.acc_salary_bank_name,
+            salaryAccount: raw.acc_salary_account,
+            profileUrl: raw.acc_profile_url,
+            isProfileCompleted: !!raw.acc_is_profile_completed,
+            isDeleted: !!raw.acc_is_deleted,
+            deletedAt: raw.acc_deleted_at,
+          }
+        : null,
+
+      team: raw.team_id
+        ? {
+            id: raw.team_id,
+            name: raw.team_name,
+            code: raw.team_code,
+            isActive: !!raw.team_is_active,
+            role: raw.tm_team_role ?? null,
+            isPrimary: !!raw.tm_is_primary,
+            joinedAt: raw.tm_joined_at,
+          }
+        : null,
+    };
   }
 }

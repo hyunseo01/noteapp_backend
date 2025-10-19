@@ -11,6 +11,8 @@ import { PinAreaGroupsModule } from './maps/pin_area_groups/pin_area_groups.modu
 import { DashboardModule } from './dashboard/dashboard.module';
 import { PhotoModule } from './photo/photo.module';
 import { SurveyReservationsModule } from './survey-reservations/survey-reservations.module';
+import { FavoriteModule } from './favorite/favorite.module';
+import { ContractsModule } from './contracts/contracts.module';
 
 @Module({
   imports: [
@@ -36,6 +38,8 @@ import { SurveyReservationsModule } from './survey-reservations/survey-reservati
     DashboardModule,
     PhotoModule,
     SurveyReservationsModule,
+    FavoriteModule,
+    ContractsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

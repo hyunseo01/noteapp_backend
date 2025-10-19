@@ -1,4 +1,11 @@
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsEnum,
+  IsOptional,
+  IsString,
+  IsUrl,
+  MaxLength,
+} from 'class-validator';
+import { PositionRank } from '../entities/account.entity';
 
 export class UpsertEmployeeInfoDto {
   @IsOptional()
@@ -33,4 +40,24 @@ export class UpsertEmployeeInfoDto {
   @IsOptional()
   @IsString()
   profileUrl?: string | null;
+
+  @IsOptional()
+  @IsEnum(PositionRank)
+  positionRank?: PositionRank;
+
+  @IsOptional()
+  @IsUrl()
+  docUrlResidentRegistration?: string | null; // 등본
+
+  @IsOptional()
+  @IsUrl()
+  docUrlResidentAbstract?: string | null; // 초본
+
+  @IsOptional()
+  @IsUrl()
+  docUrlIdCard?: string | null; // 신분증
+
+  @IsOptional()
+  @IsUrl()
+  docUrlFamilyRelation?: string | null; // 가족관계증명서
 }

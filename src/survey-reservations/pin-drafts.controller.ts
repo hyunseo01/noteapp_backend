@@ -6,7 +6,11 @@ import { PinDraftsService } from './pin-drafts.service';
 export class PinDraftsController {
   constructor(private readonly service: PinDraftsService) {}
 
-  /** 임시핀 등록 */
+  /**
+   * @remarks
+   * https://www.notion.so/2858186df78b8099bd67d5fb665f27c2?source=copy_link
+   * 임시핀 생성 API
+   */
   @Post()
   async create(@Body() dto: CreatePinDraftDto) {
     const data = await this.service.create(dto);

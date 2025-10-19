@@ -34,6 +34,12 @@ export class CredentialsController {
     return { message: '계정 목록', data: items };
   }
 
+  @Get(':id')
+  async getCredentialDetail(@Param('id') id: string) {
+    const data = await this.service.getCredentialDetail(id);
+    return { message: '계정 상세 조회', data };
+  }
+
   @Patch(':id/disable')
   async patchCredentialDisable(
     @Param('id') id: string,

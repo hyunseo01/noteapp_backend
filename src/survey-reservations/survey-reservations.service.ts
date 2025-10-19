@@ -97,12 +97,25 @@ export class SurveyReservationsService {
           .andWhere('r.is_deleted = 0')
           .andWhere('r.assignee_id = :me', { me: myAccountId });
       }, 'minReservedDate')
+      .addSelect((sq) => {
+        return sq
+          .select('r2.id', 'minReservationId')
+          .from(SurveyReservation, 'r2')
+          .where('r2.pin_draft_id = d.id')
+          .andWhere('r2.is_deleted = 0')
+          .andWhere('r2.assignee_id = :me', { me: myAccountId })
+          .orderBy('r2.reserved_date', 'ASC')
+          .addOrderBy('r2.id', 'ASC')
+          .limit(1);
+      }, 'minReservationId')
       .where('d.isActive = 1')
       .andWhere(
         `EXISTS (
-      SELECT 1 FROM survey_reservations r
-      WHERE r.pin_draft_id = d.id AND r.is_deleted = 0 AND r.assignee_id = :me
-    )`,
+        SELECT 1 FROM survey_reservations r
+        WHERE r.pin_draft_id = d.id
+          AND r.is_deleted = 0
+          AND r.assignee_id = :me
+      )`,
         { me: myAccountId },
       )
       .orderBy('minReservedDate IS NULL', 'ASC')
@@ -110,45 +123,64 @@ export class SurveyReservationsService {
       .addOrderBy('d.createdAt', 'DESC');
 
     const { entities, raw } = await qb.getRawAndEntities();
-    const items = entities.map((e, i) => ({
-      ...e,
-      reservedDate: raw[i]?.minReservedDate ?? null,
-    }));
 
-    return items;
+    return entities.map((e, i) => ({
+      id: raw[i]?.minReservationId ? String(raw[i].minReservationId) : null, // 예약 PK
+      pin_draft_id: Number(e.id),
+      lat: Number(e.lat),
+      lng: Number(e.lng),
+      addressLine: e.addressLine,
+      reservedDate: raw[i]?.minReservedDate ?? null,
+      isActive: e.isActive,
+      createdAt: e.createdAt,
+    }));
   }
 
   async cancel(id: number, meCredentialId: string) {
     return this.dataSource.transaction(async (m) => {
       const myAccountId = await this.resolveMyAccountId(meCredentialId);
-      const repo = m.getRepository(SurveyReservation);
+      const surveyReservationRepo = m.getRepository(SurveyReservation);
 
-      const found = await repo
+      const found = await surveyReservationRepo
         .createQueryBuilder('r')
         .select([
           'r.id AS id',
+          'r.pin_draft_id AS pinDraftId', //피드백 반영
           'r.assignee_id AS assigneeId',
           'r.is_deleted AS isDeleted',
         ])
         .where('r.id = :id', { id })
-        .getRawOne<{ id: string; assigneeId: string; isDeleted: number }>();
+        .getRawOne<{
+          id: string;
+          pinDraftId: string;
+          assigneeId: string;
+          isDeleted: number;
+        }>();
 
       if (!found) throw new NotFoundException('예약을 찾을 수 없습니다.');
       if (String(found.assigneeId) !== String(myAccountId)) {
         throw new ForbiddenException('내 예약만 취소할 수 있습니다.');
       }
       if (found.isDeleted) {
-        return { reservationId: id, alreadyCanceled: true };
+        return {
+          id: Number(found.id),
+          pin_draft_id: Number(found.pinDraftId),
+          alreadyCanceled: true,
+        };
       }
 
-      await repo
+      await surveyReservationRepo
         .createQueryBuilder()
         .update()
         .set({ isDeleted: true, deletedAt: () => 'CURRENT_TIMESTAMP' })
         .where('id = :id', { id })
         .execute();
 
-      return { reservationId: id, alreadyCanceled: false };
+      return {
+        reservationId: id,
+        pin_draft_id: Number(found.pinDraftId),
+        alreadyCanceled: false,
+      };
     });
   }
 }

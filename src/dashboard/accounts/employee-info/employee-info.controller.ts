@@ -35,6 +35,10 @@ export class EmployeeInfoController {
   async upsertMine(@Req() req: any, @Body() dto: UpsertEmployeeInfoDto) {
     const credentialId = req.session?.user?.credentialId as string | undefined;
     if (!credentialId) throw new Error('세션이 없습니다');
+    // 본인 수정 시 직급 수정 금지
+    if ('positionRank' in dto) {
+      delete dto.positionRank;
+    }
     const result = await this.service.upsertByCredentialId(credentialId, dto);
     return { message: '내 정보 저장', data: result };
   }
